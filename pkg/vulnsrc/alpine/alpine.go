@@ -118,6 +118,8 @@ func (vs VulnSrc) save(kv gokv.Store, cves []AlpineCVE) error {
 		}
 	}
 	wg.Wait()
+
+	log.Println("Saved Alpine DB")
 	return nil
 
 	//err := vs.dbc.BatchUpdate(func(tx *bolt.Tx) error {

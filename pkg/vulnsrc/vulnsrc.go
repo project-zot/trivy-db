@@ -5,6 +5,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aquasecurity/trivy-db/pkg/types"
@@ -93,11 +94,13 @@ func Update(kv gokv.Store, targets []string, cacheDir string, light bool, update
 		return xerrors.Errorf("failed to save metadata: %w", err)
 	}
 
+	log.Println(">> scanning all keys: ")
 	so, err := kv.Scan(kvtypes.ScanInput{BucketName: db.VulnerabilityDetailBucket})
 	if err != nil {
 		return xerrors.Errorf("failed to put vulnerability: %w", err)
 	}
 
+	log.Println(">> unmarshalling values...")
 	vulns := map[string]map[string]types.VulnerabilityDetail{}
 	for i, cveID := range so.Keys {
 		var vulnMap map[string]types.VulnerabilityDetail
@@ -107,23 +110,33 @@ func Update(kv gokv.Store, targets []string, cacheDir string, light bool, update
 			continue
 		}
 		vulns[cveID] = vulnMap
-
-		severity, title, description, references := getSeverity(vulnMap), getTitle(vulnMap), getDescription(vulnMap), getReferences(vulnMap)
-		vuln := types.Vulnerability{
-			Title:       title,
-			Description: description,
-			Severity:    severity.String(),
-			References:  references,
-		}
-
-		if err := kv.Set(kvtypes.SetItemInput{
-			BucketName: "details-bucket",
-			Key:        cveID,
-			Value:      vuln,
-		}); err != nil {
-			log.Println("failed to save vuln: ", err)
-		}
 	}
+
+	log.Println(">> adding back to trivy db..")
+	var wg sync.WaitGroup
+	for cveID, vulnMap := range vulns {
+		go func(cveID string, vulnMap map[string]types.VulnerabilityDetail) {
+			wg.Add(1)
+			defer wg.Done()
+			severity, title, description, references := getSeverity(vulnMap), getTitle(vulnMap), getDescription(vulnMap), getReferences(vulnMap)
+			vuln := types.Vulnerability{
+				Title:       title,
+				Description: description,
+				Severity:    severity.String(),
+				References:  references,
+			}
+
+			if err := kv.BatchSet(kvtypes.BatchSetItemInput{
+				BucketName: "details-bucket",
+				Keys:       []string{cveID},
+				Values:     vuln,
+			}); err != nil {
+				log.Println("failed to save vuln: ", err)
+			}
+		}(cveID, vulnMap)
+	}
+
+	wg.Wait()
 
 	//if light {
 	//	return optimizeLightDB(kv)
@@ -221,7 +234,7 @@ func scoreToSeverity(score float64) types.Severity {
 	}
 }
 
-//func optimizeFullDB(dbc db.Config) error {
+//func optimizeFullDB(dbc db.Config) error {Saving Alpine DB
 //	err := dbc.ForEachSeverity(func(tx *bolt.Tx, cveID string, _ types.Severity) error {
 //		severity, title, description, references := vulnerability.GetDetail(cveID)
 //		vuln := types.Vulnerability{
