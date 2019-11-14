@@ -7,11 +7,11 @@ import (
 )
 
 const (
-	severityBucket = "severity"
+	SeverityBucket = "severity"
 )
 
 func (dbc Config) PutSeverity(tx *bolt.Tx, cveID string, severity types.Severity) error {
-	bucket, err := tx.CreateBucketIfNotExists([]byte(severityBucket))
+	bucket, err := tx.CreateBucketIfNotExists([]byte(SeverityBucket))
 	if err != nil {
 		return xerrors.Errorf("failed to create a bucket: %w", err)
 	}
@@ -20,7 +20,7 @@ func (dbc Config) PutSeverity(tx *bolt.Tx, cveID string, severity types.Severity
 
 func (dbc Config) GetSeverity(cveID string) (severity types.Severity, err error) {
 	err = db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(severityBucket))
+		bucket := tx.Bucket([]byte(SeverityBucket))
 		value := bucket.Get([]byte(cveID))
 		severity, err = types.NewSeverity(string(value))
 		if err != nil {
@@ -36,7 +36,7 @@ func (dbc Config) GetSeverity(cveID string) (severity types.Severity, err error)
 
 func (dbc Config) ForEachSeverity(f func(tx *bolt.Tx, cveID string, severity types.Severity) error) error {
 	err := db.Batch(func(tx *bolt.Tx) error {
-		bucket, err := tx.CreateBucketIfNotExists([]byte(severityBucket))
+		bucket, err := tx.CreateBucketIfNotExists([]byte(SeverityBucket))
 		if err != nil {
 			return xerrors.Errorf("failed to create a bucket: %w", err)
 		}
@@ -59,5 +59,5 @@ func (dbc Config) ForEachSeverity(f func(tx *bolt.Tx, cveID string, severity typ
 }
 
 func (dbc Config) DeleteSeverityBucket() error {
-	return dbc.deleteBucket(severityBucket)
+	return dbc.deleteBucket(SeverityBucket)
 }

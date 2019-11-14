@@ -4,51 +4,38 @@ import (
 	"log"
 	"time"
 
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/cargo"
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/python"
-	redhatoval "github.com/aquasecurity/trivy-db/pkg/vulnsrc/redhat-oval"
-
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/node"
-
-	"github.com/aquasecurity/trivy-db/pkg/db"
-	bolt "github.com/etcd-io/bbolt"
-
-	"github.com/aquasecurity/trivy-db/pkg/types"
+	"github.com/simar7/gokv"
 
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/alpine"
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/amazon"
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/bundler"
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/composer"
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/debian"
-	debianoval "github.com/aquasecurity/trivy-db/pkg/vulnsrc/debian-oval"
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/nvd"
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/redhat"
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/ubuntu"
+
+	"github.com/aquasecurity/trivy-db/pkg/db"
+	//bolt "github.com/etcd-io/bbolt"
+
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/vulnerability"
 	"golang.org/x/xerrors"
 )
 
 type Updater interface {
-	Update(string) error
+	Update(gokv.Store, string) error
 }
 
 var (
 	// UpdateList has list of update distributions
 	UpdateList []string
 	updateMap  = map[string]Updater{
-		vulnerability.Nvd:                   nvd.NewVulnSrc(),
-		vulnerability.Alpine:                alpine.NewVulnSrc(),
-		vulnerability.RedHat:                redhat.NewVulnSrc(),
-		vulnerability.RedHatOVAL:            redhatoval.NewVulnSrc(),
-		vulnerability.Debian:                debian.NewVulnSrc(),
-		vulnerability.DebianOVAL:            debianoval.NewVulnSrc(),
-		vulnerability.Ubuntu:                ubuntu.NewVulnSrc(),
-		vulnerability.Amazon:                amazon.NewVulnSrc(),
-		vulnerability.RubySec:               bundler.NewVulnSrc(),
-		vulnerability.PhpSecurityAdvisories: composer.NewVulnSrc(),
-		vulnerability.NodejsSecurityWg:      node.NewVulnSrc(),
-		vulnerability.PythonSafetyDB:        python.NewVulnSrc(),
-		vulnerability.RustSec:               cargo.NewVulnSrc(),
+		//vulnerability.Nvd:    nvd.NewVulnSrc(),
+		vulnerability.Alpine: alpine.NewVulnSrc(),
+		//vulnerability.RedHat: redhat.NewVulnSrc(),
+		//vulnerability.RedHatOVAL:            redhatoval.NewVulnSrc(),
+		//vulnerability.Debian: debian.NewVulnSrc(),
+		//vulnerability.DebianOVAL:            debianoval.NewVulnSrc(),
+		//vulnerability.Ubuntu: ubuntu.NewVulnSrc(),
+		//vulnerability.Amazon: amazon.NewVulnSrc(),
+		//vulnerability.RubySec:               bundler.NewVulnSrc(),
+		//vulnerability.PhpSecurityAdvisories: composer.NewVulnSrc(),
+		//vulnerability.NodejsSecurityWg:      node.NewVulnSrc(),
+		//vulnerability.PythonSafetyDB:        python.NewVulnSrc(),
+		//vulnerability.RustSec:               cargo.NewVulnSrc(),
 	}
 )
 
@@ -59,7 +46,7 @@ func init() {
 	}
 }
 
-func Update(targets []string, cacheDir string, light bool, updateInterval time.Duration) error {
+func Update(kv gokv.Store, targets []string, cacheDir string, light bool, updateInterval time.Duration) error {
 	log.Println("Updating vulnerability database...")
 
 	for _, distribution := range targets {
@@ -69,7 +56,7 @@ func Update(targets []string, cacheDir string, light bool, updateInterval time.D
 		}
 		log.Printf("Updating %s data...\n", distribution)
 
-		if err := vulnSrc.Update(cacheDir); err != nil {
+		if err := vulnSrc.Update(kv, cacheDir); err != nil {
 			return xerrors.Errorf("error in %s update: %w", distribution, err)
 		}
 	}
@@ -90,60 +77,61 @@ func Update(targets []string, cacheDir string, light bool, updateInterval time.D
 		return xerrors.Errorf("failed to save metadata: %w", err)
 	}
 
-	if light {
-		return optimizeLightDB(dbc)
-	}
-	return optimizeFullDB(dbc)
-
-}
-
-func optimizeFullDB(dbc db.Config) error {
-	err := dbc.ForEachSeverity(func(tx *bolt.Tx, cveID string, _ types.Severity) error {
-		severity, title, description, references := vulnerability.GetDetail(cveID)
-		vuln := types.Vulnerability{
-			Title:       title,
-			Description: description,
-			Severity:    severity.String(),
-			References:  references,
-		}
-		if err := dbc.PutVulnerability(tx, cveID, vuln); err != nil {
-			return xerrors.Errorf("failed to put vulnerability: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return xerrors.Errorf("failed to iterate vulnerability: %w", err)
-	}
-
-	if err := dbc.DeleteSeverityBucket(); err != nil {
-		return xerrors.Errorf("failed to delete severity bucket: %w", err)
-	}
-
-	if err := dbc.DeleteVulnerabilityDetailBucket(); err != nil {
-		return xerrors.Errorf("failed to delete vulnerability detail bucket: %w", err)
-	}
+	//if light {
+	//	return optimizeLightDB(dbc)
+	//}
+	//return optimizeFullDB(dbc)
 
 	return nil
-
 }
 
-func optimizeLightDB(dbc db.Config) error {
-	err := dbc.ForEachSeverity(func(tx *bolt.Tx, cveID string, _ types.Severity) error {
-		// get correct severity
-		sev, _, _, _ := vulnerability.GetDetail(cveID)
+//func optimizeFullDB(dbc db.Config) error {
+//	err := dbc.ForEachSeverity(func(tx *bolt.Tx, cveID string, _ types.Severity) error {
+//		severity, title, description, references := vulnerability.GetDetail(cveID)
+//		vuln := types.Vulnerability{
+//			Title:       title,
+//			Description: description,
+//			Severity:    severity.String(),
+//			References:  references,
+//		}
+//		if err := dbc.PutVulnerability(tx, cveID, vuln); err != nil {
+//			return xerrors.Errorf("failed to put vulnerability: %w", err)
+//		}
+//		return nil
+//	})
+//	if err != nil {
+//		return xerrors.Errorf("failed to iterate vulnerability: %w", err)
+//	}
+//
+//	if err := dbc.DeleteSeverityBucket(); err != nil {
+//		return xerrors.Errorf("failed to delete severity bucket: %w", err)
+//	}
+//
+//	if err := dbc.DeleteVulnerabilityDetailBucket(); err != nil {
+//		return xerrors.Errorf("failed to delete vulnerability detail bucket: %w", err)
+//	}
+//
+//	return nil
+//
+//}
 
-		// overwrite unknown severity with correct severity
-		if err := dbc.PutSeverity(tx, cveID, sev); err != nil {
-			return xerrors.Errorf("failed to put severity: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return xerrors.Errorf("failed to iterate severity: %w", err)
-	}
-
-	if err = dbc.DeleteVulnerabilityDetailBucket(); err != nil {
-		return xerrors.Errorf("failed to delete vulnerability detail bucket: %w", err)
-	}
-	return nil
-}
+//func optimizeLightDB(dbc db.Config) error {
+//	err := dbc.ForEachSeverity(func(tx *bolt.Tx, cveID string, _ types.Severity) error {
+//		// get correct severity
+//		sev, _, _, _ := vulnerability.GetDetail(cveID)
+//
+//		// overwrite unknown severity with correct severity
+//		if err := dbc.PutSeverity(tx, cveID, sev); err != nil {
+//			return xerrors.Errorf("failed to put severity: %w", err)
+//		}
+//		return nil
+//	})
+//	if err != nil {
+//		return xerrors.Errorf("failed to iterate severity: %w", err)
+//	}
+//
+//	if err = dbc.DeleteVulnerabilityDetailBucket(); err != nil {
+//		return xerrors.Errorf("failed to delete vulnerability detail bucket: %w", err)
+//	}
+//	return nil
+//}

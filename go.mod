@@ -10,6 +10,7 @@ require (
 	github.com/etcd-io/bbolt v1.3.3
 	github.com/fatih/color v1.7.0
 	github.com/google/go-github/v28 v28.1.1
+	github.com/simar7/gokv v0.0.0-20191113234952-08536184a492
 	github.com/stretchr/testify v1.4.0
 	github.com/urfave/cli v1.20.0
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421

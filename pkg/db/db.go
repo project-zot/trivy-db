@@ -6,7 +6,10 @@ import (
 	"path/filepath"
 	"time"
 
+	kvtypes "github.com/simar7/gokv/types"
+
 	"github.com/aquasecurity/trivy-db/pkg/types"
+	kvstore "github.com/simar7/gokv/bbolt"
 
 	bolt "github.com/etcd-io/bbolt"
 	"golang.org/x/xerrors"
@@ -23,6 +26,7 @@ const (
 
 var (
 	db    *bolt.DB
+	kv    *kvstore.Store
 	dbDir string
 )
 
@@ -59,10 +63,10 @@ func Init(cacheDir string) (err error) {
 		return xerrors.Errorf("failed to mkdir: %w", err)
 	}
 
-	db, err = bolt.Open(dbPath, 0600, nil)
-	if err != nil {
-		return xerrors.Errorf("failed to open db: %w", err)
-	}
+	//db, err = bolt.Open(dbPath, 0600, nil)
+	//if err != nil {
+	//	return xerrors.Errorf("failed to open db: %w", err)
+	//}
 	return nil
 }
 
@@ -70,40 +74,6 @@ func Path(cacheDir string) string {
 	dbDir = filepath.Join(cacheDir, "db")
 	dbPath := filepath.Join(dbDir, "trivy.db")
 	return dbPath
-}
-
-func Close() error {
-	if err := db.Close(); err != nil {
-		return xerrors.Errorf("failed to close DB: %w", err)
-	}
-	return nil
-}
-
-func (dbc Config) GetVersion() int {
-	metadata, err := dbc.GetMetadata()
-	if err != nil {
-		return 0
-	}
-	return metadata.Version
-}
-func (dbc Config) GetMetadata() (Metadata, error) {
-	var metadata Metadata
-	value, err := Config{}.get("trivy", "metadata", "data")
-	if err != nil {
-		return Metadata{}, err
-	}
-	if err = json.Unmarshal(value, &metadata); err != nil {
-		return Metadata{}, err
-	}
-	return metadata, nil
-}
-
-func (dbc Config) SetMetadata(metadata Metadata) error {
-	err := dbc.update("trivy", "metadata", "data", metadata)
-	if err != nil {
-		return xerrors.Errorf("failed to save metadata: %w", err)
-	}
-	return nil
 }
 
 func (dbc Config) BatchUpdate(fn func(tx *bolt.Tx) error) error {
@@ -114,6 +84,42 @@ func (dbc Config) BatchUpdate(fn func(tx *bolt.Tx) error) error {
 	return nil
 }
 
+// Non interface methods
+func (dbc Config) GetVersion() int {
+	metadata, err := dbc.GetMetadata()
+	if err != nil {
+		return 0
+	}
+	return metadata.Version
+}
+func (dbc Config) GetMetadata() (Metadata, error) {
+	var metadata Metadata
+	//value, err := Config{}.get("trivy", "metadata", "data")
+	//if err != nil {
+	//	return Metadata{}, err
+	//}
+	//if err = json.Unmarshal(value, &metadata); err != nil {
+	//	return Metadata{}, err
+	//}
+
+	_, err := kv.Get(kvtypes.GetItemInput{
+		BucketName: "trivy",
+		Key:        "metadata",
+		Value:      metadata,
+	})
+	if err != nil {
+		return Metadata{}, err
+	}
+
+	return metadata, nil
+}
+func (dbc Config) SetMetadata(metadata Metadata) error {
+	err := dbc.update("trivy", "metadata", "data", metadata)
+	if err != nil {
+		return xerrors.Errorf("failed to save metadata: %w", err)
+	}
+	return nil
+}
 func (dbc Config) update(rootBucket, nestedBucket, key string, value interface{}) error {
 	err := db.Update(func(tx *bolt.Tx) error {
 		return dbc.putNestedBucket(tx, rootBucket, nestedBucket, key, value)
@@ -123,7 +129,6 @@ func (dbc Config) update(rootBucket, nestedBucket, key string, value interface{}
 	}
 	return err
 }
-
 func (dbc Config) putNestedBucket(tx *bolt.Tx, rootBucket, nestedBucket, key string, value interface{}) error {
 	root, err := tx.CreateBucketIfNotExists([]byte(rootBucket))
 	if err != nil {
@@ -131,7 +136,6 @@ func (dbc Config) putNestedBucket(tx *bolt.Tx, rootBucket, nestedBucket, key str
 	}
 	return dbc.put(root, nestedBucket, key, value)
 }
-
 func (dbc Config) put(root *bolt.Bucket, nestedBucket, key string, value interface{}) error {
 	nested, err := root.CreateBucketIfNotExists([]byte(nestedBucket))
 	if err != nil {
@@ -143,26 +147,6 @@ func (dbc Config) put(root *bolt.Bucket, nestedBucket, key string, value interfa
 	}
 	return nested.Put([]byte(key), v)
 }
-
-func (dbc Config) get(rootBucket, nestedBucket, key string) (value []byte, err error) {
-	err = db.View(func(tx *bolt.Tx) error {
-		root := tx.Bucket([]byte(rootBucket))
-		if root == nil {
-			return nil
-		}
-		nested := root.Bucket([]byte(nestedBucket))
-		if nested == nil {
-			return nil
-		}
-		value = nested.Get([]byte(key))
-		return nil
-	})
-	if err != nil {
-		return nil, xerrors.Errorf("failed to get data from db: %w", err)
-	}
-	return value, nil
-}
-
 func (dbc Config) forEach(rootBucket, nestedBucket string) (value map[string][]byte, err error) {
 	value = map[string][]byte{}
 	err = db.View(func(tx *bolt.Tx) error {
@@ -188,7 +172,6 @@ func (dbc Config) forEach(rootBucket, nestedBucket string) (value map[string][]b
 	}
 	return value, nil
 }
-
 func (dbc Config) deleteBucket(bucketName string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		if err := tx.DeleteBucket([]byte(bucketName)); err != nil {
@@ -197,3 +180,33 @@ func (dbc Config) deleteBucket(bucketName string) error {
 		return nil
 	})
 }
+
+// Non interface methods
+
+// Unused methods
+func (dbc Config) get(rootBucket, nestedBucket, key string) (value []byte, err error) {
+	err = db.View(func(tx *bolt.Tx) error {
+		root := tx.Bucket([]byte(rootBucket))
+		if root == nil {
+			return nil
+		}
+		nested := root.Bucket([]byte(nestedBucket))
+		if nested == nil {
+			return nil
+		}
+		value = nested.Get([]byte(key))
+		return nil
+	})
+	if err != nil {
+		return nil, xerrors.Errorf("failed to get data from db: %w", err)
+	}
+	return value, nil
+}
+func Close() error {
+	if err := db.Close(); err != nil {
+		return xerrors.Errorf("failed to close DB: %w", err)
+	}
+	return nil
+}
+
+// Unused methods
