@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/simar7/gokv"
+	kvtypes "github.com/simar7/gokv/types"
 
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/alpine"
 
@@ -61,17 +62,20 @@ func Update(kv gokv.Store, targets []string, cacheDir string, light bool, update
 		}
 	}
 
-	dbc := db.Config{}
 	dbType := db.TypeFull
 	if light {
 		dbType = db.TypeLight
 	}
 
-	err := dbc.SetMetadata(db.Metadata{
-		Version:    db.SchemaVersion,
-		Type:       dbType,
-		NextUpdate: time.Now().UTC().Add(updateInterval),
-		UpdatedAt:  time.Now().UTC(),
+	err := kv.Set(kvtypes.SetItemInput{
+		BucketName: "metadata",
+		Key:        "data",
+		Value: db.Metadata{
+			Version:    db.SchemaVersion,
+			Type:       dbType,
+			NextUpdate: time.Now().UTC().Add(updateInterval),
+			UpdatedAt:  time.Now().UTC(),
+		},
 	})
 	if err != nil {
 		return xerrors.Errorf("failed to save metadata: %w", err)

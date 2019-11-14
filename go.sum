@@ -189,8 +189,8 @@ github.com/rogpeppe/go-charset v0.0.0-20180617210344-2471d30d28b4/go.mod h1:qgYe
 github.com/sergi/go-diff v1.0.0 h1:Kpca3qRNrduNnOQeazBd0ysaKrUJiIuISHxogkT9RPQ=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/shurcooL/httpfs v0.0.0-20171119174359-809beceb2371/go.mod h1:ZY1cvUeJuFPAdZ/B6v7RHavJWZn2YPVFQ1OSXhCGOkg=
-github.com/simar7/gokv v0.0.0-20191113234952-08536184a492 h1:C7f06KUvJjCU/QSeCYSTdsH3OKvsYlPj5WR21o/ss68=
-github.com/simar7/gokv v0.0.0-20191113234952-08536184a492/go.mod h1:gWDp8mvCFl8KsZK2Z8TbwWBAe7hz8ILDeYv3NBePDuY=
+github.com/simar7/gokv v0.0.0-20191114022013-0d29bc4ce230 h1:xtTGv0dvCssoNHew9TZdm2aXkDL+ioWusTzHJBvF8ZA=
+github.com/simar7/gokv v0.0.0-20191114022013-0d29bc4ce230/go.mod h1:gWDp8mvCFl8KsZK2Z8TbwWBAe7hz8ILDeYv3NBePDuY=
 github.com/simplereach/timeutils v1.2.0/go.mod h1:VVbQDfN/FHRZa1LSqcwo4kNZ62OOyqLLGQKYB3pB0Q8=
 github.com/sirupsen/logrus v1.0.6/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=

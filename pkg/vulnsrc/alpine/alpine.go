@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"path/filepath"
+	"sync"
 
 	"github.com/simar7/gokv"
 	kvtypes "github.com/simar7/gokv/types"
@@ -62,47 +63,61 @@ func (vs VulnSrc) Update(kv gokv.Store, dir string) error {
 func (vs VulnSrc) save(kv gokv.Store, cves []AlpineCVE) error {
 	log.Println("Saving Alpine DB")
 
+	var eg error
+	var wg sync.WaitGroup
 	for _, cve := range cves {
-		platformName := fmt.Sprintf(platformFormat, cve.Release)
-		pkgName := cve.Package
-		advisory := types.Advisory{
-			FixedVersion: cve.FixedVersion,
-		}
+		go func() {
+			wg.Add(1)
+			defer wg.Done()
+			platformName := fmt.Sprintf(platformFormat, cve.Release)
+			pkgName := cve.Package
+			advisory := types.Advisory{
+				FixedVersion: cve.FixedVersion,
+			}
 
-		log.Println("saving alpine advisory...")
-		if err := kv.Set(kvtypes.SetItemInput{
-			BucketName: platformName,
-			Key:        pkgName,
-			Value:      map[string]types.Advisory{cve.VulnerabilityID: advisory},
-		}); err != nil {
-			return xerrors.Errorf("failed to save alpine advisory: %w", err)
-		}
+			log.Println("saving alpine advisory...")
+			if err := kv.BatchSet(kvtypes.BatchSetItemInput{
+				BucketName: platformName,
+				Keys:       []string{pkgName},
+				Values:     map[string]types.Advisory{cve.VulnerabilityID: advisory},
+				//Values: fmt.Sprintf("%s:%s", cve.VulnerabilityID, advisory),
+			}); err != nil {
+				eg = xerrors.Errorf("failed to save alpine advisory: %w", err)
+				return
+			}
 
-		log.Println("saving alpine vulnerability...")
-		vuln := types.VulnerabilityDetail{
-			Title:       cve.Subject,
-			Description: cve.Description,
-		}
+			log.Println("saving alpine vulnerability...")
+			vuln := types.VulnerabilityDetail{
+				Title:       cve.Subject,
+				Description: cve.Description,
+			}
 
-		if err := kv.Set(kvtypes.SetItemInput{
-			BucketName: db.VulnerabilityDetailBucket,
-			Key:        cve.VulnerabilityID,
-			Value:      map[string]types.VulnerabilityDetail{vulnerability.Alpine: vuln},
-		}); err != nil {
-			return xerrors.Errorf("failed to save alpine vulnerability: %w", err)
-		}
+			if err := kv.BatchSet(kvtypes.BatchSetItemInput{
+				BucketName: db.VulnerabilityDetailBucket,
+				Keys:       []string{cve.VulnerabilityID},
+				Values:     map[string]types.VulnerabilityDetail{vulnerability.Alpine: vuln},
+				//Values: fmt.Sprintf("%s:%v", vulnerability.Alpine, vuln),
+			}); err != nil {
+				eg = xerrors.Errorf("failed to save alpine vulnerability: %w", err)
+				return
+			}
 
-		log.Println("saving alpine vulnerability severity...")
-		// for light DB
-		if err := kv.Set(kvtypes.SetItemInput{
-			BucketName: db.SeverityBucket,
-			Key:        cve.VulnerabilityID,
-			Value:      types.SeverityUnknown,
-		}); err != nil {
-			return xerrors.Errorf("failed to save alpine vulnerability severity: %w", err)
+			log.Println("saving alpine vulnerability severity...")
+			// for light DB
+			if err := kv.BatchSet(kvtypes.BatchSetItemInput{
+				BucketName: db.SeverityBucket,
+				Keys:       []string{cve.VulnerabilityID},
+				Values:     types.SeverityUnknown,
+			}); err != nil {
+				eg = xerrors.Errorf("failed to save alpine vulnerability severity: %w", err)
+				return
+			}
+		}()
+		if eg != nil {
+			log.Println("one or errors occured while saving vuln info")
 		}
 	}
-
+	wg.Wait()
 	return nil
 
 	//err := vs.dbc.BatchUpdate(func(tx *bolt.Tx) error {
