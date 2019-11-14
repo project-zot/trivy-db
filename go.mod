@@ -6,12 +6,12 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/aquasecurity/trivy v0.1.6
 	github.com/aquasecurity/vuln-list-update v0.0.0-20191016075347-3d158c2bf9a2
-	github.com/boltdb/bolt v1.3.1
 	github.com/briandowns/spinner v0.0.0-20190319032542-ac46072a5a91
+	github.com/davecgh/go-spew v1.1.1
 	github.com/etcd-io/bbolt v1.3.3
 	github.com/fatih/color v1.7.0
 	github.com/google/go-github/v28 v28.1.1
-	github.com/simar7/gokv v0.0.0-20191114022013-0d29bc4ce230
+	github.com/simar7/gokv v0.0.0-20191114061234-8912dac72e5d
 	github.com/stretchr/testify v1.4.0
 	github.com/urfave/cli v1.20.0
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421

@@ -75,7 +75,7 @@ func (vs VulnSrc) save(kv gokv.Store, cves []AlpineCVE) error {
 				FixedVersion: cve.FixedVersion,
 			}
 
-			log.Println("saving alpine advisory...")
+			//log.Println("saving alpine advisory...")
 			if err := kv.BatchSet(kvtypes.BatchSetItemInput{
 				BucketName: platformName,
 				Keys:       []string{pkgName},
@@ -86,7 +86,7 @@ func (vs VulnSrc) save(kv gokv.Store, cves []AlpineCVE) error {
 				return
 			}
 
-			log.Println("saving alpine vulnerability...")
+			//log.Println("saving alpine vulnerability...")
 			vuln := types.VulnerabilityDetail{
 				Title:       cve.Subject,
 				Description: cve.Description,
@@ -102,7 +102,7 @@ func (vs VulnSrc) save(kv gokv.Store, cves []AlpineCVE) error {
 				return
 			}
 
-			log.Println("saving alpine vulnerability severity...")
+			//log.Println("saving alpine vulnerability severity...")
 			// for light DB
 			if err := kv.BatchSet(kvtypes.BatchSetItemInput{
 				BucketName: db.SeverityBucket,
