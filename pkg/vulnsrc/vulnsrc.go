@@ -82,9 +82,9 @@ func Update(kv gokv.Store, targets []string, cacheDir string, light bool, update
 	}
 
 	//if light {
-	//	return optimizeLightDB(dbc)
+	//	return optimizeLightDB(kv)
 	//}
-	//return optimizeFullDB(dbc)
+	//return optimizeFullDB(kv)
 
 	return nil
 }
@@ -119,6 +119,7 @@ func Update(kv gokv.Store, targets []string, cacheDir string, light bool, update
 //
 //}
 
+//
 //func optimizeLightDB(dbc db.Config) error {
 //	err := dbc.ForEachSeverity(func(tx *bolt.Tx, cveID string, _ types.Severity) error {
 //		// get correct severity

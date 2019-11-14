@@ -6,6 +6,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/aquasecurity/trivy v0.1.6
 	github.com/aquasecurity/vuln-list-update v0.0.0-20191016075347-3d158c2bf9a2
+	github.com/boltdb/bolt v1.3.1
 	github.com/briandowns/spinner v0.0.0-20190319032542-ac46072a5a91
 	github.com/etcd-io/bbolt v1.3.3
 	github.com/fatih/color v1.7.0

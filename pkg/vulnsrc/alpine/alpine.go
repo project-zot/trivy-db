@@ -66,7 +66,7 @@ func (vs VulnSrc) save(kv gokv.Store, cves []AlpineCVE) error {
 	var eg error
 	var wg sync.WaitGroup
 	for _, cve := range cves {
-		go func() {
+		go func(cve AlpineCVE) {
 			wg.Add(1)
 			defer wg.Done()
 			platformName := fmt.Sprintf(platformFormat, cve.Release)
@@ -112,7 +112,7 @@ func (vs VulnSrc) save(kv gokv.Store, cves []AlpineCVE) error {
 				eg = xerrors.Errorf("failed to save alpine vulnerability severity: %w", err)
 				return
 			}
-		}()
+		}(cve)
 		if eg != nil {
 			log.Println("one or errors occured while saving vuln info")
 		}
