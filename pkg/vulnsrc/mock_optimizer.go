@@ -9,25 +9,6 @@ type MockOptimizer struct {
 	mock.Mock
 }
 
-type OptimizeReturns struct {
-	Err error
-}
-
-type OptimizeExpectation struct {
-	Returns OptimizeReturns
-}
-
-func (_m *MockOptimizer) ApplyOptimizeExpectation(e OptimizeExpectation) {
-	var args []interface{}
-	_m.On("Optimize", args...).Return(e.Returns.Err)
-}
-
-func (_m *MockOptimizer) ApplyOptimizeExpectations(expectations []OptimizeExpectation) {
-	for _, e := range expectations {
-		_m.ApplyOptimizeExpectation(e)
-	}
-}
-
 // Optimize provides a mock function with given fields:
 func (_m *MockOptimizer) Optimize() error {
 	ret := _m.Called()

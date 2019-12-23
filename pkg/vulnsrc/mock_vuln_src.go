@@ -9,36 +9,6 @@ type MockVulnSrc struct {
 	mock.Mock
 }
 
-type UpdateArgs struct {
-	Dir         string
-	DirAnything bool
-}
-
-type UpdateReturns struct {
-	Err error
-}
-
-type UpdateExpectation struct {
-	Args    UpdateArgs
-	Returns UpdateReturns
-}
-
-func (_m *MockVulnSrc) ApplyUpdateExpectation(e UpdateExpectation) {
-	var args []interface{}
-	if e.Args.DirAnything {
-		args = append(args, mock.Anything)
-	} else {
-		args = append(args, e.Args.Dir)
-	}
-	_m.On("Update", args...).Return(e.Returns.Err)
-}
-
-func (_m *MockVulnSrc) ApplyUpdateExpectations(expectations []UpdateExpectation) {
-	for _, e := range expectations {
-		_m.ApplyUpdateExpectation(e)
-	}
-}
-
 // Update provides a mock function with given fields: dir
 func (_m *MockVulnSrc) Update(dir string) error {
 	ret := _m.Called(dir)

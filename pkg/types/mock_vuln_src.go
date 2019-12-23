@@ -9,44 +9,6 @@ type MockVulnSrc struct {
 	mock.Mock
 }
 
-type GetArgs struct {
-	Release         string
-	ReleaseAnything bool
-	PkgName         string
-	PkgNameAnything bool
-}
-
-type GetReturns struct {
-	Advisories []Advisory
-	Err        error
-}
-
-type GetExpectation struct {
-	Args    GetArgs
-	Returns GetReturns
-}
-
-func (_m *MockVulnSrc) ApplyGetExpectation(e GetExpectation) {
-	var args []interface{}
-	if e.Args.ReleaseAnything {
-		args = append(args, mock.Anything)
-	} else {
-		args = append(args, e.Args.Release)
-	}
-	if e.Args.PkgNameAnything {
-		args = append(args, mock.Anything)
-	} else {
-		args = append(args, e.Args.PkgName)
-	}
-	_m.On("Get", args...).Return(e.Returns.Advisories, e.Returns.Err)
-}
-
-func (_m *MockVulnSrc) ApplyGetExpectations(expectations []GetExpectation) {
-	for _, e := range expectations {
-		_m.ApplyGetExpectation(e)
-	}
-}
-
 // Get provides a mock function with given fields: release, pkgName
 func (_m *MockVulnSrc) Get(release string, pkgName string) ([]Advisory, error) {
 	ret := _m.Called(release, pkgName)
@@ -68,36 +30,6 @@ func (_m *MockVulnSrc) Get(release string, pkgName string) ([]Advisory, error) {
 	}
 
 	return r0, r1
-}
-
-type UpdateArgs struct {
-	Dir         string
-	DirAnything bool
-}
-
-type UpdateReturns struct {
-	Err error
-}
-
-type UpdateExpectation struct {
-	Args    UpdateArgs
-	Returns UpdateReturns
-}
-
-func (_m *MockVulnSrc) ApplyUpdateExpectation(e UpdateExpectation) {
-	var args []interface{}
-	if e.Args.DirAnything {
-		args = append(args, mock.Anything)
-	} else {
-		args = append(args, e.Args.Dir)
-	}
-	_m.On("Update", args...).Return(e.Returns.Err)
-}
-
-func (_m *MockVulnSrc) ApplyUpdateExpectations(expectations []UpdateExpectation) {
-	for _, e := range expectations {
-		_m.ApplyUpdateExpectation(e)
-	}
 }
 
 // Update provides a mock function with given fields: dir
