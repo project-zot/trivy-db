@@ -1,7 +1,7 @@
 name: Trivy DB
-on:
-  schedule:
-    - cron:  '0 */12 * * *'
+on: push
+        #:  schedule:
+        #:    - cron:  '0 */12 * * *'
 
 jobs:
   build:
@@ -55,14 +55,32 @@ jobs:
       run: make db-compact
       env:
         DB_TYPE: trivy-light
+
+    #
+    # Push Docker image
+    #
+    - name: Build DB as Docker image
+      run: |
+        docker build -f - -t docker.pkg.github.com/${GITHUB_REPOSITORY}/trivy-db:latest . <<EOF
+        FROM busybox
+        ARG DB_TYPE=trivy
+        COPY assets/$(DB_TYPE).db .
+        EOF
+
+    - name: Login
+      run: docker login -u publisher -p ${{ secrets.GITHUB_TOKEN }} docker.pkg.github.com
+
+    - name: Push
+      run: docker push docker.pkg.github.com/${GITHUB_REPOSITORY}/trivy-db:latest
+
     #
     # Upload
     #
-    - name: Compress assets
-      run: make db-compress
-
-    - name: Upload assets
-      run: ./trivy-db upload --dir assets
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+    #    - name: Compress assets
+    #      run: make db-compress
+    #
+    #    - name: Upload assets
+    #      run: ./trivy-db upload --dir assets
+    #      env:
+    #        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #
