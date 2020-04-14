@@ -59,11 +59,18 @@ jobs:
     #
     # Push Docker image
     #
-    - name: Build DB as Docker image
+    - name: Build full database as Docker image
       run: |
         docker build -f - -t knqyf263/trivy-db:latest . <<EOF
         FROM busybox
         COPY assets/trivy.db .
+        EOF
+
+    - name: Build light database as Docker image
+      run: |
+        docker build -f - -t knqyf263/trivy-db:light . <<EOF
+        FROM busybox
+        COPY assets/trivy-light.db .
         EOF
 
     - uses: azure/docker-login@v1
@@ -71,8 +78,10 @@ jobs:
         username: 'knqyf263'
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Push
-      run: docker push knqyf263/trivy-db:latest
+    - name: Push images
+      run: |
+        docker push knqyf263/trivy-db:latest
+        docker push knqyf263/trivy-db:light
 
     #
     # Upload
