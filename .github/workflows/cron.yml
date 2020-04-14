@@ -64,7 +64,7 @@ jobs:
         docker build -f - -t docker.pkg.github.com/${GITHUB_REPOSITORY}/trivy-db:latest . <<EOF
         FROM busybox
         ARG DB_TYPE=trivy
-        COPY assets/$(DB_TYPE).db .
+        COPY assets/${DB_TYPE}.db .
         EOF
 
     - name: Login
