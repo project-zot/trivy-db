@@ -61,16 +61,18 @@ jobs:
     #
     - name: Build DB as Docker image
       run: |
-        docker build -f - -t docker.pkg.github.com/${GITHUB_REPOSITORY}/trivy-db:latest . <<EOF
+        docker build -f - -t knqyf263/trivy-db:latest . <<EOF
         FROM busybox
         COPY assets/trivy.db .
         EOF
 
-    - name: Login
-      run: docker login -u publisher -p ${{ secrets.GITHUB_TOKEN }} docker.pkg.github.com
+    - uses: azure/docker-login@v1
+        with:
+          username: 'knqyf263'
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     - name: Push
-      run: docker push docker.pkg.github.com/${GITHUB_REPOSITORY}/trivy-db:latest
+      run: docker push knqyf263/trivy-db:latest
 
     #
     # Upload
