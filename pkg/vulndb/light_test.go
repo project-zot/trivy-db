@@ -1,6 +1,7 @@
 package vulndb_test
 
 import (
+	"path"
 	"testing"
 	"time"
 
@@ -80,6 +81,7 @@ func Test_lightDB_Build(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cacheDir := dbtest.InitTestDB(t, tt.fixtures)
+			cacheDir = path.Join(cacheDir, "db")
 			defer db.Close()
 
 			full := vulndb.New(db.TypeLight, cacheDir, 12*time.Hour)

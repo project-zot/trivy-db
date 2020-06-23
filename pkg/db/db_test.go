@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 	"time"
@@ -40,6 +41,7 @@ func TestInit(t *testing.T) {
 
 			if tt.dbPath != "" {
 				dbPath := db.Path(tmpDir)
+				dbPath = path.Join(dbPath, "db")
 				dbDir := filepath.Dir(dbPath)
 				err = os.MkdirAll(dbDir, 0700)
 				require.NoError(t, err)
