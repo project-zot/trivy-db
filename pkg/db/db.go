@@ -92,7 +92,7 @@ func Init(cacheDir string) (err error) {
 }
 
 func Path(cacheDir string) string {
-	dbDir = filepath.Join(cacheDir, "db")
+	dbDir = cacheDir
 	dbPath := filepath.Join(dbDir, "trivy.db")
 	return dbPath
 }
