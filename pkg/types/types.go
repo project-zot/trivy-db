@@ -12,10 +12,10 @@ type Severity int
 type VendorSeverity map[string]Severity
 
 type CVSS struct {
-	V2Vector string  `json:"v2_vector,omitempty"`
-	V3Vector string  `json:"v3_vector,omitempty"`
-	V2Score  float64 `json:"v2_score,omitempty"`
-	V3Score  float64 `json:"v3_score,omitempty"`
+	V2Vector string  `json:"V2Vector,omitempty"`
+	V3Vector string  `json:"V3Vector,omitempty"`
+	V2Score  float64 `json:"V2Score,omitempty"`
+	V3Score  float64 `json:"V3Score,omitempty"`
 }
 
 type CVSSVector struct {
@@ -24,7 +24,6 @@ type CVSSVector struct {
 }
 
 type VendorCVSS map[string]CVSS
-type VendorVectors map[string]CVSSVector
 
 const (
 	SeverityUnknown Severity = iota
@@ -83,34 +82,66 @@ type LastUpdated struct {
 	Date time.Time
 }
 type VulnerabilityDetail struct {
-	ID           string   `json:",omitempty"` // e.g. CVE-2019-8331, OSVDB-104365
-	CvssScore    float64  `json:",omitempty"`
-	CvssVector   string   `json:",omitempty"`
-	CvssScoreV3  float64  `json:",omitempty"`
-	CvssVectorV3 string   `json:",omitempty"`
-	Severity     Severity `json:",omitempty"`
-	SeverityV3   Severity `json:",omitempty"`
-	References   []string `json:",omitempty"`
-	Title        string   `json:",omitempty"`
-	Description  string   `json:",omitempty"`
+	ID               string     `json:",omitempty"` // e.g. CVE-2019-8331, OSVDB-104365
+	CvssScore        float64    `json:",omitempty"`
+	CvssVector       string     `json:",omitempty"`
+	CvssScoreV3      float64    `json:",omitempty"`
+	CvssVectorV3     string     `json:",omitempty"`
+	Severity         Severity   `json:",omitempty"`
+	SeverityV3       Severity   `json:",omitempty"`
+	CweIDs           []string   `json:",omitempty"` // e.g. CWE-78, CWE-89
+	References       []string   `json:",omitempty"`
+	Title            string     `json:",omitempty"`
+	Description      string     `json:",omitempty"`
+	PublishedDate    *time.Time `json:",omitempty"`
+	LastModifiedDate *time.Time `json:",omitempty"`
+}
+
+type AdvisoryDetail struct {
+	PlatformName string
+	PackageName  string
+	AdvisoryItem interface{}
 }
 
 type Advisory struct {
-	VulnerabilityID string `json:",omitempty"`
+	VulnerabilityID string   `json:",omitempty"`
+	VendorIDs       []string `json:",omitempty"` // e.g. RHSA-ID and DSA-ID
+
+	// It is filled only when FixedVersion is empty since it is obvious the state is "Fixed" when FixedVersion is not empty.
+	// e.g. Will not fix and Affected
+	State string `json:",omitempty"`
+
+	// Trivy DB has "vulnerability" bucket and severities are usually stored in the bucket per a vulnerability ID.
+	// In some cases, the advisory may have multiple severities depending on the packages.
+	// For example, CVE-2015-2328 in Debian has "unimportant" for mongodb and "low" for pcre3.
+	// e.g. https://security-tracker.debian.org/tracker/CVE-2015-2328
+	Severity Severity `json:",omitempty"`
+
+	// Versions for os package
 	FixedVersion    string `json:",omitempty"`
+	AffectedVersion string `json:",omitempty"` // Only for Arch Linux
+
+	// MajorVersion ranges for language-specific package
+	// Some advisories provide VulnerableVersions only, others provide PatchedVersions and UnaffectedVersions
+	VulnerableVersions []string `json:",omitempty"`
+	PatchedVersions    []string `json:",omitempty"`
+	UnaffectedVersions []string `json:",omitempty"`
+
+	// Custom is basically for extensibility and is not supposed to be used in OSS
+	Custom interface{} `json:",omitempty"`
 }
 
 type Vulnerability struct {
-	Title          string         `json:",omitempty"`
-	Description    string         `json:",omitempty"`
-	Severity       string         `json:",omitempty"`
-	VendorSeverity VendorSeverity `json:",omitempty"`
-	VendorVectors  VendorVectors  `json:",omitempty"` // Deprecated: VendorVectors is only for backwards compatibility. Use CVSS instead.
-	CVSS           VendorCVSS     `json:",omitempty"`
-	References     []string       `json:",omitempty"`
-}
+	Title            string         `json:",omitempty"`
+	Description      string         `json:",omitempty"`
+	Severity         string         `json:",omitempty"` // Selected from VendorSeverity, depending on a scan target
+	CweIDs           []string       `json:",omitempty"` // e.g. CWE-78, CWE-89
+	VendorSeverity   VendorSeverity `json:",omitempty"`
+	CVSS             VendorCVSS     `json:",omitempty"`
+	References       []string       `json:",omitempty"`
+	PublishedDate    *time.Time     `json:",omitempty"`
+	LastModifiedDate *time.Time     `json:",omitempty"`
 
-type VulnSrc interface {
-	Update(dir string) (err error)
-	Get(release string, pkgName string) (advisories []Advisory, err error)
+	// Custom is basically for extensibility and is not supposed to be used in OSS
+	Custom interface{} `json:",omitempty"`
 }

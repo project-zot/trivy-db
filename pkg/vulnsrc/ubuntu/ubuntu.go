@@ -7,12 +7,11 @@ import (
 	"log"
 	"path/filepath"
 
-	"github.com/aquasecurity/trivy-db/pkg/types"
-
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/xerrors"
 
 	"github.com/aquasecurity/trivy-db/pkg/db"
+	"github.com/aquasecurity/trivy-db/pkg/types"
 	"github.com/aquasecurity/trivy-db/pkg/utils"
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/vulnerability"
 )
@@ -23,7 +22,7 @@ const (
 )
 
 var (
-	targetStatus          = []string{"needed", "deferred", "released"}
+	targetStatuses        = []string{"needed", "deferred", "released"}
 	UbuntuReleasesMapping = map[string]string{
 		"precise": "12.04",
 		"quantal": "12.10",
@@ -42,17 +41,39 @@ var (
 		"disco":   "19.04",
 		"eoan":    "19.10",
 		"focal":   "20.04",
+		"groovy":  "20.10",
+		"hirsute": "21.04",
 	}
 )
 
-type VulnSrc struct {
-	dbc db.Operation
+type Option func(src *VulnSrc)
+
+func WithStatuses(statuses []string) Option {
+	return func(src *VulnSrc) {
+		src.statuses = statuses
+	}
 }
 
-func NewVulnSrc() VulnSrc {
-	return VulnSrc{
-		dbc: db.Config{},
+type VulnSrc struct {
+	statuses []string
+	dbc      db.Operation
+}
+
+func NewVulnSrc(opts ...Option) VulnSrc {
+	src := VulnSrc{
+		statuses: targetStatuses,
+		dbc:      db.Config{},
 	}
+
+	for _, o := range opts {
+		o(&src)
+	}
+
+	return src
+}
+
+func (vs VulnSrc) Name() string {
+	return vulnerability.Ubuntu
 }
 
 func (vs VulnSrc) Update(dir string) error {
@@ -97,7 +118,7 @@ func (vs VulnSrc) commit(tx *bolt.Tx, cves []UbuntuCVE) error {
 		for packageName, patch := range cve.Patches {
 			pkgName := string(packageName)
 			for release, status := range patch {
-				if !utils.StringInSlice(status.Status, targetStatus) {
+				if !utils.StringInSlice(status.Status, vs.statuses) {
 					continue
 				}
 				osVersion, ok := UbuntuReleasesMapping[string(release)]
@@ -109,7 +130,7 @@ func (vs VulnSrc) commit(tx *bolt.Tx, cves []UbuntuCVE) error {
 				if status.Status == "released" {
 					advisory.FixedVersion = status.Note
 				}
-				if err := vs.dbc.PutAdvisory(tx, platformName, pkgName, cve.Candidate, advisory); err != nil {
+				if err := vs.dbc.PutAdvisoryDetail(tx, cve.Candidate, platformName, pkgName, advisory); err != nil {
 					return xerrors.Errorf("failed to save Ubuntu advisory: %w", err)
 				}
 
@@ -117,8 +138,6 @@ func (vs VulnSrc) commit(tx *bolt.Tx, cves []UbuntuCVE) error {
 					Severity:    severityFromPriority(cve.Priority),
 					References:  cve.References,
 					Description: cve.Description,
-					// TODO
-					Title: "",
 				}
 				if err := vs.dbc.PutVulnerabilityDetail(tx, cve.Candidate, vulnerability.Ubuntu, vuln); err != nil {
 					return xerrors.Errorf("failed to save Ubuntu vulnerability: %w", err)
@@ -126,7 +145,7 @@ func (vs VulnSrc) commit(tx *bolt.Tx, cves []UbuntuCVE) error {
 
 				// for light DB
 				if err := vs.dbc.PutSeverity(tx, cve.Candidate, types.SeverityUnknown); err != nil {
-					return xerrors.Errorf("failed to save alpine vulnerability severity: %w", err)
+					return xerrors.Errorf("failed to save Ubuntu vulnerability severity: %w", err)
 				}
 			}
 		}
@@ -138,7 +157,7 @@ func (vs VulnSrc) Get(release string, pkgName string) ([]types.Advisory, error) 
 	bucket := fmt.Sprintf(platformFormat, release)
 	advisories, err := vs.dbc.GetAdvisories(bucket, pkgName)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to get Amazon advisories: %w", err)
+		return nil, xerrors.Errorf("failed to get Ubuntu advisories: %w", err)
 	}
 	return advisories, nil
 }

@@ -1,11 +1,13 @@
 package db
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/aquasecurity/trivy-db/pkg/types"
@@ -31,6 +33,7 @@ var (
 type Operation interface {
 	BatchUpdate(fn func(*bolt.Tx) error) (err error)
 
+	GetVulnerabilityDetail(cveID string) (detail map[string]types.VulnerabilityDetail, err error)
 	PutVulnerabilityDetail(tx *bolt.Tx, vulnerabilityID string, source string,
 		vulnerability types.VulnerabilityDetail) (err error)
 	DeleteVulnerabilityDetailBucket() (err error)
@@ -48,20 +51,22 @@ type Operation interface {
 
 	PutVulnerability(tx *bolt.Tx, vulnerabilityID string, vulnerability types.Vulnerability) (err error)
 	GetVulnerability(vulnerabilityID string) (vulnerability types.Vulnerability, err error)
+
+	GetAdvisoryDetails(cveID string) ([]types.AdvisoryDetail, error)
+	PutAdvisoryDetail(tx *bolt.Tx, vulnerabilityID string, source string, pkgName string,
+		advisory interface{}) (err error)
+	DeleteAdvisoryDetailBucket() error
 }
 
 type Metadata struct {
-	Version    int  `json:",omitempty"`
-	Type       Type `json:",omitempty"`
-	NextUpdate time.Time
-	UpdatedAt  time.Time
+	Version      int  `json:",omitempty"`
+	Type         Type `json:",omitempty"`
+	NextUpdate   time.Time
+	UpdatedAt    time.Time
+	DownloadedAt time.Time
 }
 
 type Config struct {
-}
-
-type VulnOperation interface {
-	GetVulnerabilityDetail(cveID string) (map[string]types.VulnerabilityDetail, error)
 }
 
 func Init(cacheDir string) (err error) {
@@ -104,6 +109,10 @@ func Close() error {
 	return nil
 }
 
+func (dbc Config) Connection() *bolt.DB {
+	return db
+}
+
 func (dbc Config) GetVersion() int {
 	metadata, err := dbc.GetMetadata()
 	if err != nil {
@@ -111,6 +120,7 @@ func (dbc Config) GetVersion() int {
 	}
 	return metadata.Version
 }
+
 func (dbc Config) GetMetadata() (Metadata, error) {
 	var metadata Metadata
 	value, err := Config{}.get("trivy", "metadata", "data")
@@ -199,20 +209,37 @@ func (dbc Config) get(rootBucket, nestedBucket, key string) (value []byte, err e
 func (dbc Config) forEach(rootBucket, nestedBucket string) (value map[string][]byte, err error) {
 	value = map[string][]byte{}
 	err = db.View(func(tx *bolt.Tx) error {
-		root := tx.Bucket([]byte(rootBucket))
-		if root == nil {
-			return nil
+		var rootBuckets []string
+
+		if strings.Contains(rootBucket, "::") {
+			// e.g. "pip::", "rubygems::"
+			prefix := []byte(rootBucket)
+			c := tx.Cursor()
+			for k, _ := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = c.Next() {
+				rootBuckets = append(rootBuckets, string(k))
+			}
+		} else {
+			// e.g. "GitHub Security Advisory Composer"
+			rootBuckets = append(rootBuckets, rootBucket)
 		}
-		nested := root.Bucket([]byte(nestedBucket))
-		if nested == nil {
-			return nil
-		}
-		err := nested.ForEach(func(k, v []byte) error {
-			value[string(k)] = v
-			return nil
-		})
-		if err != nil {
-			return xerrors.Errorf("error in db foreach: %w", err)
+
+		for _, r := range rootBuckets {
+			root := tx.Bucket([]byte(r))
+			if root == nil {
+				continue
+			}
+
+			nested := root.Bucket([]byte(nestedBucket))
+			if nested == nil {
+				continue
+			}
+			err := nested.ForEach(func(k, v []byte) error {
+				value[string(k)] = v
+				return nil
+			})
+			if err != nil {
+				return xerrors.Errorf("error in db foreach: %w", err)
+			}
 		}
 		return nil
 	})
