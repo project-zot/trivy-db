@@ -35,10 +35,6 @@ func NewVulnSrc() VulnSrc {
 	}
 }
 
-func (vs VulnSrc) Name() string {
-	return vulnerability.OracleOVAL
-}
-
 func (vs VulnSrc) Update(dir string) error {
 	rootDir := filepath.Join(dir, "vuln-list", oracleDir)
 
@@ -104,7 +100,7 @@ func (vs VulnSrc) commit(tx *bolt.Tx, ovals []OracleOVAL) error {
 			}
 
 			for _, vulnID := range vulnIDs {
-				if err := vs.dbc.PutAdvisoryDetail(tx, vulnID, platformName, affectedPkg.Package.Name, advisory); err != nil {
+				if err := vs.dbc.PutAdvisory(tx, platformName, affectedPkg.Package.Name, vulnID, advisory); err != nil {
 					return xerrors.Errorf("failed to save Oracle Linux OVAL: %w", err)
 				}
 			}

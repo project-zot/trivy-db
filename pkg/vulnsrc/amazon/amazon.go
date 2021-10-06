@@ -8,13 +8,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aquasecurity/trivy-db/pkg/types"
+
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/xerrors"
 
 	"github.com/aquasecurity/trivy-db/pkg/db"
-	"github.com/aquasecurity/trivy-db/pkg/types"
 	"github.com/aquasecurity/trivy-db/pkg/utils"
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/vulnerability"
+	"github.com/aquasecurity/vuln-list-update/amazon"
 )
 
 const (
@@ -24,59 +26,35 @@ const (
 
 var (
 	targetVersions = []string{"1", "2"}
+	fileWalker     = utils.FileWalk // TODO: Remove once utils.go exposes an interface
 )
 
 type VulnSrc struct {
-	dbc        db.Operation
-	advisories map[string][]ALAS
+	dbc      db.Operation
+	alasList []alas
 }
 
-// ALAS has detailed data of ALAS
-type ALAS struct {
-	ID          string      `json:"id,omitempty"`
-	Title       string      `json:"title,omitempty"`
-	Severity    string      `json:"severity,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Packages    []Package   `json:"packages,omitempty"`
-	References  []Reference `json:"references,omitempty"`
-	CveIDs      []string    `json:"cveids,omitempty"`
-}
-
-// Package has affected package information
-type Package struct {
-	Name    string `json:"name,omitempty"`
-	Epoch   string `json:"epoch,omitempty"`
-	Version string `json:"version,omitempty"`
-	Release string `json:"release,omitempty"`
-	Arch    string `json:"arch,omitempty"`
-}
-
-// Reference has reference information
-type Reference struct {
-	Href string `json:"href,omitempty"`
+type alas struct {
+	Version string
+	amazon.ALAS
 }
 
 func NewVulnSrc() VulnSrc {
 	return VulnSrc{
-		dbc:        db.Config{},
-		advisories: map[string][]ALAS{},
+		dbc: db.Config{},
 	}
-}
-
-func (vs VulnSrc) Name() string {
-	return vulnerability.Amazon
 }
 
 func (vs VulnSrc) Update(dir string) error {
 	rootDir := filepath.Join(dir, "vuln-list", amazonDir)
 
-	err := utils.FileWalk(rootDir, vs.walkFunc)
+	err := fileWalker(rootDir, vs.walkFunc)
 	if err != nil {
-		return xerrors.Errorf("error in Amazon walk: %w", err)
+		return xerrors.Errorf("error in amazon walk: %w", err)
 	}
 
 	if err = vs.save(); err != nil {
-		return xerrors.Errorf("error in Amazon save: %w", err)
+		return xerrors.Errorf("error in amazon save: %w", err)
 	}
 
 	return nil
@@ -89,62 +67,66 @@ func (vs *VulnSrc) walkFunc(r io.Reader, path string) error {
 	}
 	version := paths[len(paths)-2]
 	if !utils.StringInSlice(version, targetVersions) {
-		log.Printf("unsupported Amazon version: %s\n", version)
+		log.Printf("unsupported amazon version: %s\n", version)
 		return nil
 	}
 
-	var alas ALAS
-	if err := json.NewDecoder(r).Decode(&alas); err != nil {
-		return xerrors.Errorf("failed to decode Amazon JSON: %w", err)
+	var vuln amazon.ALAS
+	if err := json.NewDecoder(r).Decode(&vuln); err != nil {
+		return xerrors.Errorf("failed to decode amazon JSON: %w", err)
 	}
 
-	vs.advisories[version] = append(vs.advisories[version], alas)
+	vs.alasList = append(vs.alasList, alas{
+		Version: version,
+		ALAS:    vuln,
+	})
 	return nil
 }
 
 func (vs VulnSrc) save() error {
-	log.Println("Saving Amazon DB")
-	err := vs.dbc.BatchUpdate(func(tx *bolt.Tx) error {
-		return vs.commit(tx)
-	})
+	log.Println("Saving amazon DB")
+	err := vs.dbc.BatchUpdate(vs.commit())
 	if err != nil {
 		return xerrors.Errorf("error in batch update: %w", err)
 	}
 	return nil
 }
 
-func (vs VulnSrc) commit(tx *bolt.Tx) error {
-	for majorVersion, alasList := range vs.advisories {
-		for _, alas := range alasList {
-			for _, cveID := range alas.CveIDs {
-				for _, pkg := range alas.Packages {
-					platformName := fmt.Sprintf(platformFormat, majorVersion)
-					advisory := types.Advisory{
-						FixedVersion: constructVersion(pkg.Epoch, pkg.Version, pkg.Release),
-					}
-					if err := vs.dbc.PutAdvisoryDetail(tx, cveID, platformName, pkg.Name, advisory); err != nil {
-						return xerrors.Errorf("failed to save Amazon advisory: %w", err)
-					}
+// TODO: Cleanup the double layer of nested closures
+func (vs VulnSrc) commit() func(tx *bolt.Tx) error {
+	return vs.commitFunc
+}
 
-					var references []string
-					for _, ref := range alas.References {
-						references = append(references, ref.Href)
-					}
+func (vs VulnSrc) commitFunc(tx *bolt.Tx) error {
+	for _, alas := range vs.alasList {
+		for _, cveID := range alas.CveIDs {
+			for _, pkg := range alas.Packages {
+				platformName := fmt.Sprintf(platformFormat, alas.Version)
+				advisory := types.Advisory{
+					FixedVersion: constructVersion(pkg.Epoch, pkg.Version, pkg.Release),
+				}
+				if err := vs.dbc.PutAdvisory(tx, platformName, pkg.Name, cveID, advisory); err != nil {
+					return xerrors.Errorf("failed to save amazon advisory: %w", err)
+				}
 
-					vuln := types.VulnerabilityDetail{
-						Severity:    severityFromPriority(alas.Severity),
-						References:  references,
-						Description: alas.Description,
-						Title:       "",
-					}
-					if err := vs.dbc.PutVulnerabilityDetail(tx, cveID, vulnerability.Amazon, vuln); err != nil {
-						return xerrors.Errorf("failed to save Amazon vulnerability detail: %w", err)
-					}
+				var references []string
+				for _, ref := range alas.References {
+					references = append(references, ref.Href)
+				}
 
-					// for light DB
-					if err := vs.dbc.PutSeverity(tx, cveID, types.SeverityUnknown); err != nil {
-						return xerrors.Errorf("failed to save Amazon vulnerability severity: %w", err)
-					}
+				vuln := types.VulnerabilityDetail{
+					Severity:    severityFromPriority(alas.Severity),
+					References:  references,
+					Description: alas.Description,
+					Title:       "",
+				}
+				if err := vs.dbc.PutVulnerabilityDetail(tx, cveID, vulnerability.Amazon, vuln); err != nil {
+					return xerrors.Errorf("failed to save amazon vulnerability detail: %w", err)
+				}
+
+				// for light DB
+				if err := vs.dbc.PutSeverity(tx, cveID, types.SeverityUnknown); err != nil {
+					return xerrors.Errorf("failed to save alpine vulnerability severity: %w", err)
 				}
 			}
 		}

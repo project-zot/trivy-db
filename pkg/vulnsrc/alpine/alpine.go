@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"path/filepath"
-	"strings"
+
+	"github.com/aquasecurity/trivy-db/pkg/types"
 
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/xerrors"
 
 	"github.com/aquasecurity/trivy-db/pkg/db"
-	"github.com/aquasecurity/trivy-db/pkg/types"
 	"github.com/aquasecurity/trivy-db/pkg/utils"
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/vulnerability"
 )
@@ -34,39 +35,53 @@ func NewVulnSrc() VulnSrc {
 	}
 }
 
-func (vs VulnSrc) Name() string {
-	return vulnerability.Alpine
-}
-
 func (vs VulnSrc) Update(dir string) error {
 	rootDir := filepath.Join(dir, "vuln-list", alpineDir)
-	var advisories []advisory
+	var cves []AlpineCVE
 	err := utils.FileWalk(rootDir, func(r io.Reader, path string) error {
-		var advisory advisory
-		if err := json.NewDecoder(r).Decode(&advisory); err != nil {
-			return xerrors.Errorf("failed to decode Alpine advisory: %w", err)
+		var cve AlpineCVE
+		if err := json.NewDecoder(r).Decode(&cve); err != nil {
+			return xerrors.Errorf("failed to decode Alpine JSON: %w", err)
 		}
-		advisories = append(advisories, advisory)
+		cves = append(cves, cve)
 		return nil
 	})
 	if err != nil {
 		return xerrors.Errorf("error in Alpine walk: %w", err)
 	}
 
-	if err = vs.save(advisories); err != nil {
+	if err = vs.save(cves); err != nil {
 		return xerrors.Errorf("error in Alpine save: %w", err)
 	}
 
 	return nil
 }
 
-func (vs VulnSrc) save(advisories []advisory) error {
+func (vs VulnSrc) save(cves []AlpineCVE) error {
+	log.Println("Saving Alpine DB")
+
 	err := vs.dbc.BatchUpdate(func(tx *bolt.Tx) error {
-		for _, advisory := range advisories {
-			version := strings.TrimPrefix(advisory.Distroversion, "v")
-			platformName := fmt.Sprintf(platformFormat, version)
-			if err := vs.saveSecFixes(tx, platformName, advisory.PkgName, advisory.Secfixes); err != nil {
-				return err
+		for _, cve := range cves {
+			platformName := fmt.Sprintf(platformFormat, cve.Release)
+			pkgName := cve.Package
+			advisory := types.Advisory{
+				FixedVersion: cve.FixedVersion,
+			}
+			if err := vs.dbc.PutAdvisory(tx, platformName, pkgName, cve.VulnerabilityID, advisory); err != nil {
+				return xerrors.Errorf("failed to save alpine advisory: %w", err)
+			}
+
+			vuln := types.VulnerabilityDetail{
+				Title:       cve.Subject,
+				Description: cve.Description,
+			}
+			if err := vs.dbc.PutVulnerabilityDetail(tx, cve.VulnerabilityID, vulnerability.Alpine, vuln); err != nil {
+				return xerrors.Errorf("failed to save alpine vulnerability: %w", err)
+			}
+
+			// for light DB
+			if err := vs.dbc.PutSeverity(tx, cve.VulnerabilityID, types.SeverityUnknown); err != nil {
+				return xerrors.Errorf("failed to save alpine vulnerability severity: %w", err)
 			}
 		}
 		return nil
@@ -77,35 +92,7 @@ func (vs VulnSrc) save(advisories []advisory) error {
 	return nil
 }
 
-func (vs VulnSrc) saveSecFixes(tx *bolt.Tx, platform, pkgName string, secfixes map[string][]string) error {
-	for fixedVersion, vulnIDs := range secfixes {
-		advisory := types.Advisory{
-			FixedVersion: fixedVersion,
-		}
-		for _, vulnID := range vulnIDs {
-			// See https://gitlab.alpinelinux.org/alpine/infra/docker/secdb/-/issues/3
-			// e.g. CVE-2017-2616 (+ regression fix)
-			ids := strings.Fields(vulnID)
-			for _, cveID := range ids {
-				cveID = strings.ReplaceAll(cveID, "CVE_", "CVE-")
-				if !strings.HasPrefix(cveID, "CVE-") {
-					continue
-				}
-				if err := vs.dbc.PutAdvisoryDetail(tx, cveID, platform, pkgName, advisory); err != nil {
-					return xerrors.Errorf("failed to save Alpine advisory: %w", err)
-				}
-
-				// for light DB
-				if err := vs.dbc.PutSeverity(tx, cveID, types.SeverityUnknown); err != nil {
-					return xerrors.Errorf("failed to save Alpine vulnerability severity: %w", err)
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func (vs VulnSrc) Get(release, pkgName string) ([]types.Advisory, error) {
+func (vs VulnSrc) Get(release string, pkgName string) ([]types.Advisory, error) {
 	bucket := fmt.Sprintf(platformFormat, release)
 	advisories, err := vs.dbc.GetAdvisories(bucket, pkgName)
 	if err != nil {

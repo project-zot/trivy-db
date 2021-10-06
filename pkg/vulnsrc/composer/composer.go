@@ -49,10 +49,6 @@ func NewVulnSrc() VulnSrc {
 	}
 }
 
-func (vs VulnSrc) Name() string {
-	return vulnerability.PhpSecurityAdvisories
-}
-
 func (vs VulnSrc) Update(dir string) (err error) {
 	repoPath := filepath.Join(dir, composerDir)
 	if err := vs.update(repoPath); err != nil {
@@ -100,7 +96,7 @@ func (vs VulnSrc) walk(tx *bolt.Tx, root string) error {
 		}
 
 		a := Advisory{Branches: advisory.Branches}
-		err = vs.dbc.PutAdvisoryDetail(tx, vulnerabilityID, vulnerability.PhpSecurityAdvisories, advisory.Reference, a)
+		err = vs.dbc.PutAdvisory(tx, vulnerability.PhpSecurityAdvisories, advisory.Reference, vulnerabilityID, a)
 		if err != nil {
 			return xerrors.Errorf("failed to save php advisory: %w", err)
 		}

@@ -85,10 +85,6 @@ func NewVulnSrc() VulnSrc {
 	}
 }
 
-func (vs VulnSrc) Name() string {
-	return vulnerability.NodejsSecurityWg
-}
-
 func (vs VulnSrc) Update(dir string) (err error) {
 	repoPath = filepath.Join(dir, nodeDir)
 	if err := vs.update(repoPath); err != nil {
@@ -155,7 +151,7 @@ func (vs VulnSrc) commit(tx *bolt.Tx, f *os.File) error {
 	}
 	for _, vulnID := range vulnerabilityIDs {
 		// for detecting vulnerabilities
-		err := vs.dbc.PutAdvisoryDetail(tx, vulnID, vulnerability.NodejsSecurityWg, advisory.ModuleName, a)
+		err := vs.dbc.PutAdvisory(tx, vulnerability.NodejsSecurityWg, advisory.ModuleName, vulnID, a)
 		if err != nil {
 			return xerrors.Errorf("failed to save node advisory: %w", err)
 		}

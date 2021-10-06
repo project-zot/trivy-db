@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aquasecurity/trivy-db/pkg/github"
+	"github.com/aquasecurity/trivy-db/pkg/vulnsrc"
 )
 
 func TestAppConfig_Upload(t *testing.T) {
@@ -84,18 +85,20 @@ func TestAppConfig_Upload(t *testing.T) {
 				_ = f3.Close()
 			}
 
+			switch {
+			case tc.inputDir != "":
+				vulnsrc.UpdateList = []string{tc.inputDir}
+			default:
+				vulnsrc.UpdateList = []string{d}
+			}
+
 			mockVCSClient := new(github.MockVCSClientInterface)
 			mockVCSClient.ApplyUploadReleaseAssetsExpectation(tc.uploadReleaseAssert)
 
 			ac := AppConfig{Client: mockVCSClient}
 			cliApp := ac.NewApp("1.2.3")
 
-			dir := d
-			if tc.inputDir != "" {
-				dir = tc.inputDir
-			}
-
-			err := cliApp.Run([]string{"trivy-db", "upload", "--dir", dir})
+			err := cliApp.Run([]string{"trivy-db", "upload"})
 
 			switch {
 			case tc.expectedError != nil:

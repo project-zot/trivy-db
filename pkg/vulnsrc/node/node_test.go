@@ -19,17 +19,17 @@ func TestVulnSrc_Commit(t *testing.T) {
 	testCases := []struct {
 		name                   string
 		inputFile              string
-		putAdvisoryDetail      []db.OperationPutAdvisoryDetailExpectation
-		putVulnerabilityDetail []db.OperationPutVulnerabilityDetailExpectation
-		putSeverity            []db.OperationPutSeverityExpectation
+		putAdvisory            []db.PutAdvisoryExpectation
+		putVulnerabilityDetail []db.PutVulnerabilityDetailExpectation
+		putSeverity            []db.PutSeverityExpectation
 		expectedErrorMsg       string
 	}{
 		{
 			name:      "happy path, npm package only includes CVSS score",
 			inputFile: "npm_cvssnumberonly.json",
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "nodejs-security-wg",
 						PkgName:         "bassmaster",
@@ -41,9 +41,9 @@ func TestVulnSrc_Commit(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2014-7205",
 						Source:          vulnerability.NodejsSecurityWg,
@@ -57,9 +57,9 @@ func TestVulnSrc_Commit(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2014-7205",
 						Severity:        types.SeverityUnknown,
@@ -70,9 +70,9 @@ func TestVulnSrc_Commit(t *testing.T) {
 		{
 			name:      "happy path, npm package includes CVSS score and severity string",
 			inputFile: "npm_cvssnumberandstring.json",
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "nodejs-security-wg",
 						PkgName:         "bassmaster",
@@ -84,9 +84,9 @@ func TestVulnSrc_Commit(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2014-7205",
 						Source:          vulnerability.NodejsSecurityWg,
@@ -100,9 +100,9 @@ func TestVulnSrc_Commit(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2014-7205",
 						Severity:        types.SeverityUnknown,
@@ -121,9 +121,9 @@ func TestVulnSrc_Commit(t *testing.T) {
 		{
 			name:      "happy-(ish) path, npm package includes no cvss and no severity",
 			inputFile: "npm_nocvssseverity.json",
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "nodejs-security-wg",
 						PkgName:         "missingcvss-missingseverity-package",
@@ -132,9 +132,9 @@ func TestVulnSrc_Commit(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						VulnerabilityID: "NSWG-ECO-0",
 						Source:          vulnerability.NodejsSecurityWg,
@@ -146,9 +146,9 @@ func TestVulnSrc_Commit(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "NSWG-ECO-0",
 						Severity:        types.SeverityUnknown,
@@ -159,9 +159,9 @@ func TestVulnSrc_Commit(t *testing.T) {
 		{
 			name:      "happy-(ish) path, npm package includes null cvss",
 			inputFile: "npm_nullcvssscore.json",
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "nodejs-security-wg",
 						PkgName:         "hubl-server",
@@ -173,9 +173,9 @@ func TestVulnSrc_Commit(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						VulnerabilityID: "NSWG-ECO-334",
 						Source:          vulnerability.NodejsSecurityWg,
@@ -188,9 +188,9 @@ func TestVulnSrc_Commit(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "NSWG-ECO-334",
 						Severity:        types.SeverityUnknown,
@@ -209,7 +209,7 @@ func TestVulnSrc_Commit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tx := &bolt.Tx{}
 			mockDBConfig := new(db.MockOperation)
-			mockDBConfig.ApplyPutAdvisoryDetailExpectations(tc.putAdvisoryDetail)
+			mockDBConfig.ApplyPutAdvisoryExpectations(tc.putAdvisory)
 			mockDBConfig.ApplyPutVulnerabilityDetailExpectations(tc.putVulnerabilityDetail)
 			mockDBConfig.ApplyPutSeverityExpectations(tc.putSeverity)
 

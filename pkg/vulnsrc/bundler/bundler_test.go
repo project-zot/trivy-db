@@ -13,9 +13,9 @@ import (
 
 func Test_walkFunc(t *testing.T) {
 	mockDBConfig := new(db.MockOperation)
-	mockDBConfig.ApplyPutAdvisoryDetailExpectations([]db.OperationPutAdvisoryDetailExpectation{
+	mockDBConfig.ApplyPutAdvisoryExpectations([]db.PutAdvisoryExpectation{
 		{
-			Args: db.OperationPutAdvisoryDetailArgs{
+			Args: db.PutAdvisoryArgs{
 				TxAnything:      true,
 				Source:          vulnerability.RubySec,
 				PkgName:         "doorkeeper-openid_connect",
@@ -28,9 +28,9 @@ func Test_walkFunc(t *testing.T) {
 			},
 		},
 	})
-	mockDBConfig.ApplyPutVulnerabilityDetailExpectations([]db.OperationPutVulnerabilityDetailExpectation{
+	mockDBConfig.ApplyPutVulnerabilityDetailExpectations([]db.PutVulnerabilityDetailExpectation{
 		{
-			Args: db.OperationPutVulnerabilityDetailArgs{
+			Args: db.PutVulnerabilityDetailArgs{
 				TxAnything:      true,
 				VulnerabilityID: "CVE-2019-9837",
 				Source:          vulnerability.RubySec,
@@ -45,9 +45,9 @@ func Test_walkFunc(t *testing.T) {
 			},
 		},
 	})
-	mockDBConfig.ApplyPutSeverityExpectations([]db.OperationPutSeverityExpectation{
+	mockDBConfig.ApplyPutSeverityExpectations([]db.PutSeverityExpectation{
 		{
-			Args: db.OperationPutSeverityArgs{
+			Args: db.PutSeverityArgs{
 				TxAnything:      true,
 				VulnerabilityID: "CVE-2019-9837",
 				Severity:        0,

@@ -1,4 +1,3 @@
----
 name: Go
 on: [push, pull_request]
 jobs:
@@ -7,22 +6,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.16
-        id: go
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.14
+      id: go
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v1
-      - name: yaml-lint
-        uses: ibiqlik/action-yamllint@v3
-      - name: Lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: v1.41
-          args: -D errcheck
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+    
+    - name: Install GolangCI-Lint
+      run: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s $version
+      env:
+        version: v1.21.0
 
-      - name: Test
-        run: |
-          go test -v ./...
+    - name: Lint
+      run: ./bin/golangci-lint run
+          
+    - name: Test
+      run: |
+        go test -v ./...

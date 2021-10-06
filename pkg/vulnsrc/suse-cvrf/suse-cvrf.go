@@ -47,17 +47,6 @@ func NewVulnSrc(dist Distribution) VulnSrc {
 	}
 }
 
-func (vs VulnSrc) Name() string {
-	switch vs.dist {
-	case SUSEEnterpriseLinux:
-		return vulnerability.SuseCVRF
-	case OpenSUSE:
-		return vulnerability.OpenSuseCVRF
-	default:
-		return ""
-	}
-}
-
 func (vs VulnSrc) Update(dir string) error {
 	log.Println("Saving SUSE CVRF")
 
@@ -113,7 +102,7 @@ func (vs VulnSrc) commit(tx *bolt.Tx, cvrfs []SuseCvrf) error {
 				FixedVersion: affectedPkg.Package.FixedVersion,
 			}
 
-			if err := vs.dbc.PutAdvisoryDetail(tx, cvrf.Tracking.ID, affectedPkg.OSVer, affectedPkg.Package.Name, advisory); err != nil {
+			if err := vs.dbc.PutAdvisory(tx, affectedPkg.OSVer, affectedPkg.Package.Name, cvrf.Tracking.ID, advisory); err != nil {
 				return xerrors.Errorf("unable to save %s CVRF: %w", affectedPkg.OSVer, err)
 			}
 		}

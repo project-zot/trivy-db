@@ -1,30 +1,14 @@
 package redhatoval
 
 type RedhatOVAL struct {
-	Class    string
-	ID       string
-	Version  string
-	Metadata Metadata
-	Criteria Criteria
-}
-
-type Metadata struct {
-	Title        string
-	AffectedList []Affected
-	References   []Reference
-	Description  string
-	Advisory     Advisory
-}
-
-type Advisory struct {
-	From            string
-	Severity        string
-	Rights          string
-	Issued          Issued
-	Updated         Updated
-	Cves            []Cve
-	Bugzilla        []Bugzilla
-	AffectedCpeList []string
+	ID          string
+	Class       string
+	Title       string
+	Affecteds   []Affected
+	References  []Reference
+	Description string
+	Advisory    Advisory
+	Criteria    Criteria
 }
 
 type Criteria struct {
@@ -34,6 +18,7 @@ type Criteria struct {
 }
 
 type Criterion struct {
+	Negate  bool
 	TestRef string
 	Comment string
 }
@@ -49,12 +34,13 @@ type Reference struct {
 	RefURL string
 }
 
-type Issued struct {
-	Date string
-}
-
-type Updated struct {
-	Date string
+type Advisory struct {
+	Severity        string
+	Cves            []Cve
+	Bugzillas       []Bugzilla
+	AffectedCPEList []string
+	Issued          struct{ Date string }
+	Updated         struct{ Date string }
 }
 
 type Cve struct {
@@ -68,71 +54,9 @@ type Cve struct {
 }
 
 type Bugzilla struct {
-	ID   string
-	Href string
-}
-
-type Tests struct {
-	RpminfoTests []RpminfoTest
-}
-
-type Objects struct {
-	RpminfoObjects []RpminfoObject
-}
-
-type States struct {
-	RpminfoState []RpminfoState
-}
-
-type State struct {
-	Text     string
-	StateRef string
-}
-
-type Object struct {
-	Text      string
-	ObjectRef string
-}
-
-type RpminfoTest struct {
-	Check          string
-	Comment        string
-	ID             string
-	Version        string
-	CheckExistence string
-	Object         Object
-	State          State
-}
-
-type RpminfoObject struct {
-	ID      string
-	Version string
-	Name    string
-}
-
-type RpminfoState struct {
-	ID             string
-	Version        string
-	Arch           Arch
-	Evr            Evr
-	SignatureKeyID SignatureKeyID
-}
-
-type SignatureKeyID struct {
-	Text      string
-	Operation string
-}
-
-type Arch struct {
-	Text      string
-	Datatype  string
-	Operation string
-}
-
-type Evr struct {
-	Text      string
-	Datatype  string
-	Operation string
+	ID    string
+	URL   string
+	Title string
 }
 
 type Package struct {

@@ -20,7 +20,7 @@ func TestVulnSrc_Update(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        args
-		batchUpdate []db.OperationBatchUpdateExpectation
+		batchUpdate []db.BatchUpdateExpectation
 		wantErr     string
 	}{
 		{
@@ -28,9 +28,9 @@ func TestVulnSrc_Update(t *testing.T) {
 			args: args{
 				dir: "testdata",
 			},
-			batchUpdate: []db.OperationBatchUpdateExpectation{
+			batchUpdate: []db.BatchUpdateExpectation{
 				{
-					Args: db.OperationBatchUpdateArgs{
+					Args: db.BatchUpdateArgs{
 						FnAnything: true,
 					},
 				},
@@ -48,12 +48,12 @@ func TestVulnSrc_Update(t *testing.T) {
 			args: args{
 				dir: "testdata",
 			},
-			batchUpdate: []db.OperationBatchUpdateExpectation{
+			batchUpdate: []db.BatchUpdateExpectation{
 				{
-					Args: db.OperationBatchUpdateArgs{
+					Args: db.BatchUpdateArgs{
 						FnAnything: true,
 					},
-					Returns: db.OperationBatchUpdateReturns{
+					Returns: db.BatchUpdateReturns{
 						Err: errors.New("error"),
 					},
 				},
@@ -90,68 +90,11 @@ func TestVulnSrc_save(t *testing.T) {
 		name                   string
 		ecosystem              Ecosystem
 		args                   args
-		putAdvisoryDetail      []db.OperationPutAdvisoryDetailExpectation
-		putVulnerabilityDetail []db.OperationPutVulnerabilityDetailExpectation
-		putSeverity            []db.OperationPutSeverityExpectation
+		putAdvisory            []db.PutAdvisoryExpectation
+		putVulnerabilityDetail []db.PutVulnerabilityDetailExpectation
+		putSeverity            []db.PutSeverityExpectation
 		wantErr                string
 	}{
-		{
-			name:      "ignore withdrawn advisory",
-			ecosystem: Composer,
-			args: args{
-				ghsas: []GithubSecurityAdvisory{
-					{
-						Severity:  "MODERATE",
-						UpdatedAt: "2021-02-10T18:26:25Z",
-						Package: Package{
-							Ecosystem: "COMPOSER",
-							Name:      "adminer",
-						},
-						Advisory: GhsaAdvisory{
-							DatabaseId: 3338,
-							Id:         "MDE2OlNlY3VyaXR5QWR2aXNvcnlHSFNBLW01NmctM2c4di0ycnh3",
-							GhsaId:     "GHSA-m56g-3g8v-2rxw",
-							References: []Reference{
-								{
-									Url: "https://nvd.nist.gov/vuln/detail/CVE-2020-35572",
-								},
-								{
-									Url: "https://github.com/advisories/GHSA-m56g-3g8v-2rxw",
-								},
-							},
-							Identifiers: []Identifier{
-								{
-									Type:  "GHSA",
-									Value: "GHSA-m56g-3g8v-2rxw",
-								},
-								{
-									Type:  "CVE",
-									Value: "CVE-2020-35572",
-								},
-							},
-							Description: "**Withdrawn:** Duplicate of GHSA-9pgx-gcph-mpqr.\n\nAdminer before 4.7.9 allows XSS via the history parameter to the default URI. ",
-							Origin:      "UNSPECIFIED",
-							PublishedAt: "2021-02-11T20:46:53Z",
-							Severity:    "MODERATE",
-							Summary:     "XSS in Adminer",
-							UpdatedAt:   "2021-02-11T20:46:56Z",
-							WithdrawnAt: "2021-02-11T20:46:56Z",
-						},
-						Versions: []Version{
-							{
-								FirstPatchedVersion: FirstPatchedVersion{
-									Identifier: "4.7.9",
-								},
-								VulnerableVersionRange: "\u003c 4.7.9",
-							},
-						},
-					},
-				},
-			},
-			putAdvisoryDetail:      []db.OperationPutAdvisoryDetailExpectation{},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{},
-			putSeverity:            []db.OperationPutSeverityExpectation{},
-		},
 		{
 			name:      "happy path composer",
 			ecosystem: Composer,
@@ -213,9 +156,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "GitHub Security Advisory Composer",
 						PkgName:         "contao/core-bundle",
@@ -235,9 +178,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						Source:          vulnerability.GHSAComposer,
 						VulnerabilityID: "GHSA-wjx8-cgrm-hh8p",
@@ -254,9 +197,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "GHSA-wjx8-cgrm-hh8p",
 						Severity:        types.SeverityUnknown,
@@ -314,9 +257,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "GitHub Security Advisory Maven",
 						PkgName:         "org.springframework.boot:spring-boot",
@@ -332,9 +275,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						Source:          vulnerability.GHSAMaven,
 						VulnerabilityID: "CVE-2018-1196",
@@ -348,9 +291,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2018-1196",
 						Severity:        types.SeverityUnknown,
@@ -408,9 +351,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "GitHub Security Advisory Npm",
 						PkgName:         "atob",
@@ -422,9 +365,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						Source:          vulnerability.GHSANpm,
 						VulnerabilityID: "CVE-2018-3745",
@@ -438,9 +381,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2018-3745",
 						Severity:        types.SeverityUnknown,
@@ -498,22 +441,23 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "GitHub Security Advisory Nuget",
 						PkgName:         "CLEditor",
 						VulnerabilityID: "CVE-2019-1010113",
 						Advisory: Advisory{
+							PatchedVersions:    []string{""},
 							VulnerableVersions: []string{"\u003c= 1.4.5"},
 						},
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						Source:          vulnerability.GHSANuget,
 						VulnerabilityID: "CVE-2019-1010113",
@@ -527,9 +471,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2019-1010113",
 						Severity:        types.SeverityUnknown,
@@ -593,9 +537,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "GitHub Security Advisory Pip",
 						PkgName:         "django",
@@ -613,9 +557,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						Source:          vulnerability.GHSAPip,
 						VulnerabilityID: "CVE-2018-14574",
@@ -631,217 +575,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
-						TxAnything:      true,
-						VulnerabilityID: "CVE-2018-14574",
-						Severity:        types.SeverityUnknown,
-					},
-				},
-			},
-		},
-		{
-			name:      "happy path pip uppercase",
-			ecosystem: Pip,
-			args: args{
-				ghsas: []GithubSecurityAdvisory{
-					{
-						Severity:  "MODERATE",
-						UpdatedAt: "2018-10-04T18:05:59Z",
-						Package: Package{
-							Ecosystem: "PIP",
-							Name:      "Django",
-						},
-						Advisory: GhsaAdvisory{
-							DatabaseId: 663,
-							Id:         "MDE2OlNlY3VyaXR5QWR2aXNvcnlHSFNBLTVoZzMtNmMyZi1mM3dy",
-							GhsaId:     "GHSA-5hg3-6c2f-f3wr",
-							References: []Reference{
-								{
-									Url: "https://nvd.nist.gov/vuln/detail/CVE-2018-14574",
-								},
-							},
-							Identifiers: []Identifier{
-								{
-									Type:  "GHSA",
-									Value: "GHSA-5hg3-6c2f-f3wr",
-								},
-								{
-									Type:  "CVE",
-									Value: "CVE-2018-14574",
-								},
-							},
-							Description: "django.middleware.common.CommonMiddleware in Django 1.11.x before 1.11.15 and 2.0.x before 2.0.8 has an Open Redirect.",
-							Origin:      "UNSPECIFIED",
-							PublishedAt: "2018-10-04T21:58:46Z",
-							Severity:    "MODERATE",
-							Summary:     "Moderate severity vulnerability that affects django",
-							UpdatedAt:   "2019-07-03T21:02:03Z",
-							WithdrawnAt: "",
-						},
-						Versions: []Version{
-							{
-								FirstPatchedVersion: FirstPatchedVersion{
-									Identifier: "2.0.8",
-								},
-								VulnerableVersionRange: "\u003e= 2.0, \u003c 2.0.8",
-							},
-							{
-								FirstPatchedVersion: FirstPatchedVersion{
-									Identifier: "1.11.15",
-								},
-								VulnerableVersionRange: "\u003e= 1.11.0, \u003c 1.11.15",
-							},
-						},
-					},
-				},
-			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
-				{
-					Args: db.OperationPutAdvisoryDetailArgs{
-						TxAnything:      true,
-						Source:          "GitHub Security Advisory Pip",
-						PkgName:         "django",
-						VulnerabilityID: "CVE-2018-14574",
-						Advisory: Advisory{
-							PatchedVersions: []string{
-								"2.0.8",
-								"1.11.15",
-							},
-							VulnerableVersions: []string{
-								"\u003e= 2.0, \u003c 2.0.8",
-								"\u003e= 1.11.0, \u003c 1.11.15",
-							},
-						},
-					},
-				},
-			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
-				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
-						TxAnything:      true,
-						Source:          vulnerability.GHSAPip,
-						VulnerabilityID: "CVE-2018-14574",
-						Vulnerability: types.VulnerabilityDetail{
-							ID:       "CVE-2018-14574",
-							Severity: types.SeverityMedium,
-							References: []string{
-								"https://nvd.nist.gov/vuln/detail/CVE-2018-14574",
-							},
-							Title:       "Moderate severity vulnerability that affects django",
-							Description: "django.middleware.common.CommonMiddleware in Django 1.11.x before 1.11.15 and 2.0.x before 2.0.8 has an Open Redirect.",
-						},
-					},
-				},
-			},
-			putSeverity: []db.OperationPutSeverityExpectation{
-				{
-					Args: db.OperationPutSeverityArgs{
-						TxAnything:      true,
-						VulnerabilityID: "CVE-2018-14574",
-						Severity:        types.SeverityUnknown,
-					},
-				},
-			},
-		},
-		{
-			name:      "happy path pip hyphen",
-			ecosystem: Pip,
-			args: args{
-				ghsas: []GithubSecurityAdvisory{
-					{
-						Severity:  "MODERATE",
-						UpdatedAt: "2018-10-04T18:05:59Z",
-						Package: Package{
-							Ecosystem: "PIP",
-							Name:      "dj_ango",
-						},
-						Advisory: GhsaAdvisory{
-							DatabaseId: 663,
-							Id:         "MDE2OlNlY3VyaXR5QWR2aXNvcnlHSFNBLTVoZzMtNmMyZi1mM3dy",
-							GhsaId:     "GHSA-5hg3-6c2f-f3wr",
-							References: []Reference{
-								{
-									Url: "https://nvd.nist.gov/vuln/detail/CVE-2018-14574",
-								},
-							},
-							Identifiers: []Identifier{
-								{
-									Type:  "GHSA",
-									Value: "GHSA-5hg3-6c2f-f3wr",
-								},
-								{
-									Type:  "CVE",
-									Value: "CVE-2018-14574",
-								},
-							},
-							Description: "django.middleware.common.CommonMiddleware in Django 1.11.x before 1.11.15 and 2.0.x before 2.0.8 has an Open Redirect.",
-							Origin:      "UNSPECIFIED",
-							PublishedAt: "2018-10-04T21:58:46Z",
-							Severity:    "MODERATE",
-							Summary:     "Moderate severity vulnerability that affects django",
-							UpdatedAt:   "2019-07-03T21:02:03Z",
-							WithdrawnAt: "",
-						},
-						Versions: []Version{
-							{
-								FirstPatchedVersion: FirstPatchedVersion{
-									Identifier: "2.0.8",
-								},
-								VulnerableVersionRange: "\u003e= 2.0, \u003c 2.0.8",
-							},
-							{
-								FirstPatchedVersion: FirstPatchedVersion{
-									Identifier: "1.11.15",
-								},
-								VulnerableVersionRange: "\u003e= 1.11.0, \u003c 1.11.15",
-							},
-						},
-					},
-				},
-			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
-				{
-					Args: db.OperationPutAdvisoryDetailArgs{
-						TxAnything:      true,
-						Source:          "GitHub Security Advisory Pip",
-						PkgName:         "dj-ango",
-						VulnerabilityID: "CVE-2018-14574",
-						Advisory: Advisory{
-							PatchedVersions: []string{
-								"2.0.8",
-								"1.11.15",
-							},
-							VulnerableVersions: []string{
-								"\u003e= 2.0, \u003c 2.0.8",
-								"\u003e= 1.11.0, \u003c 1.11.15",
-							},
-						},
-					},
-				},
-			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
-				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
-						TxAnything:      true,
-						Source:          vulnerability.GHSAPip,
-						VulnerabilityID: "CVE-2018-14574",
-						Vulnerability: types.VulnerabilityDetail{
-							ID:       "CVE-2018-14574",
-							Severity: types.SeverityMedium,
-							References: []string{
-								"https://nvd.nist.gov/vuln/detail/CVE-2018-14574",
-							},
-							Title:       "Moderate severity vulnerability that affects django",
-							Description: "django.middleware.common.CommonMiddleware in Django 1.11.x before 1.11.15 and 2.0.x before 2.0.8 has an Open Redirect.",
-						},
-					},
-				},
-			},
-			putSeverity: []db.OperationPutSeverityExpectation{
-				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2018-14574",
 						Severity:        types.SeverityUnknown,
@@ -899,9 +635,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "GitHub Security Advisory Rubygems",
 						PkgName:         "activestorage",
@@ -913,9 +649,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						Source:          vulnerability.GHSARubygems,
 						VulnerabilityID: "CVE-2018-16477",
@@ -929,9 +665,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2018-16477",
 						Severity:        types.SeverityUnknown,
@@ -940,216 +676,7 @@ func TestVulnSrc_save(t *testing.T) {
 			},
 		},
 		{
-			name:      "happy path with empty PatchedVersion",
-			ecosystem: Maven,
-			args: args{
-				ghsas: []GithubSecurityAdvisory{
-					{
-						Severity:  "HIGH",
-						UpdatedAt: "2019-10-18T15:22:29Z",
-						Package: Package{
-							Ecosystem: "Maven",
-							Name:      "com.fasterxml.jackson.core:jackson-databind",
-						},
-						Advisory: GhsaAdvisory{
-							DatabaseId: 1950,
-							Id:         "MDE2OlNlY3VyaXR5QWR2aXNvcnlHSFNBLWd3dzctcDV3NC13cmZ2",
-							GhsaId:     "GHSA-gww7-p5w4-wrfv",
-							References: []Reference{
-								{
-									Url: "https://nvd.nist.gov/vuln/detail/CVE-2019-20330",
-								},
-								{
-									Url: "https://github.com/advisories/GHSA-gww7-p5w4-wrfv",
-								},
-							},
-							Identifiers: []Identifier{
-								{
-									Type:  "GHSA",
-									Value: "GHSA-gww7-p5w4-wrfv",
-								},
-								{
-									Type:  "CVE",
-									Value: "CVE-2019-20330",
-								},
-							},
-							Description: "FasterXML jackson-databind 2.x before 2.9.10.2 lacks certain net.sf.ehcache blocking.",
-							Origin:      "UNSPECIFIED",
-							PublishedAt: "2020-03-04T20:52:11Z",
-							Severity:    "HIGH",
-							Summary:     "Deserialization of Untrusted Data in jackson-databind",
-							UpdatedAt:   "2020-03-04T20:52:11Z",
-							WithdrawnAt: "",
-						},
-						Versions: []Version{
-							{
-								FirstPatchedVersion: FirstPatchedVersion{
-									Identifier: "2.9.10.2",
-								},
-								VulnerableVersionRange: "\u003e= 2.9.0, \u003c= 2.9.10.1",
-							},
-							{
-								FirstPatchedVersion: FirstPatchedVersion{
-									Identifier: "2.8.11.5",
-								},
-								VulnerableVersionRange: "\u003e= 2.8.0, \u003c= 2.8.11.4",
-							},
-							{
-								FirstPatchedVersion: FirstPatchedVersion{
-									Identifier: "",
-								},
-								VulnerableVersionRange: "\u003e= 2.7.0, \u003c= 2.7.9.6",
-							},
-							{
-								FirstPatchedVersion: FirstPatchedVersion{
-									Identifier: "",
-								},
-								VulnerableVersionRange: "\u003e= 2.6.0, \u003c= 2.6.7.3",
-							},
-						},
-					},
-				},
-			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
-				{
-					Args: db.OperationPutAdvisoryDetailArgs{
-						TxAnything:      true,
-						Source:          "GitHub Security Advisory Maven",
-						PkgName:         "com.fasterxml.jackson.core:jackson-databind",
-						VulnerabilityID: "CVE-2019-20330",
-						Advisory: Advisory{
-							PatchedVersions: []string{"2.9.10.2", "2.8.11.5"},
-							VulnerableVersions: []string{
-								"\u003e= 2.9.0, \u003c= 2.9.10.1",
-								"\u003e= 2.8.0, \u003c= 2.8.11.4",
-								"\u003e= 2.7.0, \u003c= 2.7.9.6",
-								"\u003e= 2.6.0, \u003c= 2.6.7.3",
-							},
-						},
-					},
-				},
-			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
-				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
-						TxAnything:      true,
-						Source:          vulnerability.GHSAMaven,
-						VulnerabilityID: "CVE-2019-20330",
-						Vulnerability: types.VulnerabilityDetail{
-							ID:       "CVE-2019-20330",
-							Severity: types.SeverityHigh,
-							References: []string{
-								"https://nvd.nist.gov/vuln/detail/CVE-2019-20330",
-								"https://github.com/advisories/GHSA-gww7-p5w4-wrfv",
-							},
-							Title:       "Deserialization of Untrusted Data in jackson-databind",
-							Description: "FasterXML jackson-databind 2.x before 2.9.10.2 lacks certain net.sf.ehcache blocking.",
-						},
-					},
-				},
-			},
-			putSeverity: []db.OperationPutSeverityExpectation{
-				{
-					Args: db.OperationPutSeverityArgs{
-						TxAnything:      true,
-						VulnerabilityID: "CVE-2019-20330",
-						Severity:        types.SeverityUnknown,
-					},
-				},
-			},
-		},
-		{
-			name:      "happy path with empty CVE-ID",
-			ecosystem: Npm,
-			args: args{
-				ghsas: []GithubSecurityAdvisory{
-					{
-						Severity:  "MODERATE",
-						UpdatedAt: "2019-10-18T15:22:29Z",
-						Package: Package{
-							Ecosystem: "NPM",
-							Name:      "renovate",
-						},
-						Advisory: GhsaAdvisory{
-							DatabaseId: 1749,
-							Id:         "MDE2OlNlY3VyaXR5QWR2aXNvcnlHSFNBLXY3eDMtN2h3Ny1wY2pn",
-							GhsaId:     "GHSA-v7x3-7hw7-pcjg",
-							References: []Reference{
-								{
-									Url: "https://github.com/advisories/GHSA-v7x3-7hw7-pcjg",
-								},
-							},
-							Identifiers: []Identifier{
-								{
-									Type:  "GHSA",
-									Value: "GHSA-v7x3-7hw7-pcjg",
-								},
-								{
-									Type:  "CVE",
-									Value: "",
-								},
-							},
-							Description: "## Go Modules Vulnerability Disclosure\\n\\n### Impact\\r\\n\\r\\nTemporary repository tokens were leaked into Pull Requests comments in during certain Go Modules update failure scenarios.\\r\\n\\r\\n### Patches\\r\\n\\r\\nThe problem has been patched. Self-hosted users should upgrade to v19.38.7 or later.\\r\\n\\r\\n### Workarounds\\r\\n\\r\\nDisable Go Modules support.\\r\\n\\r\\n### References\\r\\n\\r\\nBlog post: https://renovatebot.com/blog/go-modules-vulnerability-disclosure\\r\\n\\r\\n### For more information\\r\\n\\r\\nIf you have any questions or comments about this advisory:\\r\\n* Open an issue in [Renovate](http://github.com/renovatebot/renovate)\\r\\n* Email us at [support@renovatebot.com](mailto:support@renovatebot.com)\\r\\n\\n",
-							Origin:      "UNSPECIFIED",
-							PublishedAt: "2019-10-21T16:02:33",
-							Severity:    "MODERATE",
-							Summary:     "Moderate severity vulnerability that affects renovate",
-							UpdatedAt:   "2019-10-21T16:02:33Z",
-							WithdrawnAt: "",
-						},
-						Versions: []Version{
-							{
-								FirstPatchedVersion: FirstPatchedVersion{
-									Identifier: "19.38.7",
-								},
-								VulnerableVersionRange: "\u003c 19.38.7",
-							},
-						},
-					},
-				},
-			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
-				{
-					Args: db.OperationPutAdvisoryDetailArgs{
-						TxAnything:      true,
-						Source:          "GitHub Security Advisory Npm",
-						PkgName:         "renovate",
-						VulnerabilityID: "GHSA-v7x3-7hw7-pcjg",
-						Advisory: Advisory{
-							PatchedVersions:    []string{"19.38.7"},
-							VulnerableVersions: []string{"< 19.38.7"},
-						},
-					},
-				},
-			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
-				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
-						TxAnything:      true,
-						Source:          vulnerability.GHSANpm,
-						VulnerabilityID: "GHSA-v7x3-7hw7-pcjg",
-						Vulnerability: types.VulnerabilityDetail{
-							ID:          "GHSA-v7x3-7hw7-pcjg",
-							Severity:    types.SeverityMedium,
-							References:  []string{"https://github.com/advisories/GHSA-v7x3-7hw7-pcjg"},
-							Title:       "Moderate severity vulnerability that affects renovate",
-							Description: "## Go Modules Vulnerability Disclosure\\n\\n### Impact\\r\\n\\r\\nTemporary repository tokens were leaked into Pull Requests comments in during certain Go Modules update failure scenarios.\\r\\n\\r\\n### Patches\\r\\n\\r\\nThe problem has been patched. Self-hosted users should upgrade to v19.38.7 or later.\\r\\n\\r\\n### Workarounds\\r\\n\\r\\nDisable Go Modules support.\\r\\n\\r\\n### References\\r\\n\\r\\nBlog post: https://renovatebot.com/blog/go-modules-vulnerability-disclosure\\r\\n\\r\\n### For more information\\r\\n\\r\\nIf you have any questions or comments about this advisory:\\r\\n* Open an issue in [Renovate](http://github.com/renovatebot/renovate)\\r\\n* Email us at [support@renovatebot.com](mailto:support@renovatebot.com)\\r\\n\\n",
-						},
-					},
-				},
-			},
-			putSeverity: []db.OperationPutSeverityExpectation{
-				{
-					Args: db.OperationPutSeverityArgs{
-						TxAnything:      true,
-						VulnerabilityID: "GHSA-v7x3-7hw7-pcjg",
-						Severity:        types.SeverityUnknown,
-					},
-				},
-			},
-		},
-		{
-			name:      "putAdvisoryDetail returns an error",
+			name:      "putAdvisory returns an error",
 			ecosystem: Rubygems,
 			args: args{
 				ghsas: []GithubSecurityAdvisory{
@@ -1198,9 +725,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "GitHub Security Advisory Rubygems",
 						PkgName:         "activestorage",
@@ -1210,7 +737,7 @@ func TestVulnSrc_save(t *testing.T) {
 							VulnerableVersions: []string{"\u003e= 5.2.0, \u003c 5.2.1.1"},
 						},
 					},
-					Returns: db.OperationPutAdvisoryDetailReturns{
+					Returns: db.PutAdvisoryReturns{
 						Err: errors.New("error"),
 					},
 				},
@@ -1267,9 +794,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "GitHub Security Advisory Rubygems",
 						PkgName:         "activestorage",
@@ -1281,9 +808,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						Source:          vulnerability.GHSARubygems,
 						VulnerabilityID: "CVE-2018-16477",
@@ -1295,7 +822,7 @@ func TestVulnSrc_save(t *testing.T) {
 							Description: "A bypass vulnerability in Active Storage \u003e= 5.2.0 for Google Cloud Storage and Disk services allow an attacker to modify the `content-disposition` and `content-type` parameters which can be used in with HTML files and have them executed inline. Additionally, if combined with other techniques such as cookie bombing and specially crafted AppCache manifests, an attacker can gain access to private signed URLs within a specific storage path.",
 						},
 					},
-					Returns: db.OperationPutVulnerabilityDetailReturns{
+					Returns: db.PutVulnerabilityDetailReturns{
 						Err: errors.New("error"),
 					},
 				},
@@ -1352,9 +879,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "GitHub Security Advisory Rubygems",
 						PkgName:         "activestorage",
@@ -1366,9 +893,9 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						Source:          vulnerability.GHSARubygems,
 						VulnerabilityID: "CVE-2018-16477",
@@ -1382,14 +909,14 @@ func TestVulnSrc_save(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2018-16477",
 						Severity:        types.SeverityUnknown,
 					},
-					Returns: db.OperationPutSeverityReturns{
+					Returns: db.PutSeverityReturns{
 						Err: errors.New("error"),
 					},
 				},
@@ -1400,7 +927,7 @@ func TestVulnSrc_save(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDBConfig := new(db.MockOperation)
-			mockDBConfig.ApplyPutAdvisoryDetailExpectations(tt.putAdvisoryDetail)
+			mockDBConfig.ApplyPutAdvisoryExpectations(tt.putAdvisory)
 			mockDBConfig.ApplyPutVulnerabilityDetailExpectations(tt.putVulnerabilityDetail)
 			mockDBConfig.ApplyPutSeverityExpectations(tt.putSeverity)
 
@@ -1430,7 +957,7 @@ func TestVulnSrc_Get(t *testing.T) {
 		name                       string
 		args                       args
 		ecosystem                  Ecosystem
-		forEachAdvisoryExpectation db.OperationForEachAdvisoryExpectation
+		forEachAdvisoryExpectation db.ForEachAdvisoryExpectation
 		want                       []Advisory
 		wantErr                    string
 	}{
@@ -1441,12 +968,12 @@ func TestVulnSrc_Get(t *testing.T) {
 				release: "GitHub Security Advisory Composer",
 				pkgName: "contao/core-bundle",
 			},
-			forEachAdvisoryExpectation: db.OperationForEachAdvisoryExpectation{
-				Args: db.OperationForEachAdvisoryArgs{
+			forEachAdvisoryExpectation: db.ForEachAdvisoryExpectation{
+				Args: db.ForEachAdvisoryArgs{
 					Source:  "GitHub Security Advisory Composer",
 					PkgName: "contao/core-bundle",
 				},
-				Returns: db.OperationForEachAdvisoryReturns{
+				Returns: db.ForEachAdvisoryReturns{
 					Value: map[string][]byte{
 						"CVE-2019-19745": []byte(`{"VulnerableVersions": ["4.8.6", "4.4.46"], "PatchedVersions": ["\u003e= 4.5.0, \u003c 4.8.6", "\u003e= 4.0.0, \u003c 4.4.46"]}`),
 					},
@@ -1467,12 +994,12 @@ func TestVulnSrc_Get(t *testing.T) {
 				release: "GitHub Security Advisory Maven",
 				pkgName: "org.springframework.boot:spring-boot",
 			},
-			forEachAdvisoryExpectation: db.OperationForEachAdvisoryExpectation{
-				Args: db.OperationForEachAdvisoryArgs{
+			forEachAdvisoryExpectation: db.ForEachAdvisoryExpectation{
+				Args: db.ForEachAdvisoryArgs{
 					Source:  "GitHub Security Advisory Maven",
 					PkgName: "org.springframework.boot:spring-boot",
 				},
-				Returns: db.OperationForEachAdvisoryReturns{
+				Returns: db.ForEachAdvisoryReturns{
 					Value: map[string][]byte{
 						"CVE-2018-1196": []byte(`{"VulnerableVersions": ["1.5.10"], "PatchedVersions": ["\u003e= 1.5.0, \u003c 1.5.10"]}`),
 					},
@@ -1493,12 +1020,12 @@ func TestVulnSrc_Get(t *testing.T) {
 				release: "GitHub Security Advisory Npm",
 				pkgName: "atob",
 			},
-			forEachAdvisoryExpectation: db.OperationForEachAdvisoryExpectation{
-				Args: db.OperationForEachAdvisoryArgs{
+			forEachAdvisoryExpectation: db.ForEachAdvisoryExpectation{
+				Args: db.ForEachAdvisoryArgs{
 					Source:  "GitHub Security Advisory Npm",
 					PkgName: "atob",
 				},
-				Returns: db.OperationForEachAdvisoryReturns{
+				Returns: db.ForEachAdvisoryReturns{
 					Value: map[string][]byte{
 						"GHSA-8w4h-3cm3-2pm2": []byte(`{"VulnerableVersions": ["2.1.0"], "PatchedVersions": ["\u003c 2.1.0"]}`),
 					},
@@ -1519,12 +1046,12 @@ func TestVulnSrc_Get(t *testing.T) {
 				release: "GitHub Security Advisory Nuget",
 				pkgName: "CLEditor",
 			},
-			forEachAdvisoryExpectation: db.OperationForEachAdvisoryExpectation{
-				Args: db.OperationForEachAdvisoryArgs{
+			forEachAdvisoryExpectation: db.ForEachAdvisoryExpectation{
+				Args: db.ForEachAdvisoryArgs{
 					Source:  "GitHub Security Advisory Nuget",
 					PkgName: "CLEditor",
 				},
-				Returns: db.OperationForEachAdvisoryReturns{
+				Returns: db.ForEachAdvisoryReturns{
 					Value: map[string][]byte{
 						"GHSA-hh56-x62g-gvhc": []byte(`{"VulnerableVersions": [""], "PatchedVersions": ["\u003c= 1.4.5"]}`),
 					},
@@ -1545,64 +1072,12 @@ func TestVulnSrc_Get(t *testing.T) {
 				release: "GitHub Security Advisory Pip",
 				pkgName: "django",
 			},
-			forEachAdvisoryExpectation: db.OperationForEachAdvisoryExpectation{
-				Args: db.OperationForEachAdvisoryArgs{
+			forEachAdvisoryExpectation: db.ForEachAdvisoryExpectation{
+				Args: db.ForEachAdvisoryArgs{
 					Source:  "GitHub Security Advisory Pip",
 					PkgName: "django",
 				},
-				Returns: db.OperationForEachAdvisoryReturns{
-					Value: map[string][]byte{
-						"GHSA-5hg3-6c2f-f3wr": []byte(`{"VulnerableVersions": ["2.0.8", "1.11.15"], "PatchedVersions": ["\u003e= 2.0, \u003c 2.0.8", "\u003e= 1.11.0, \u003c 1.11.15"]}`),
-					},
-				},
-			},
-			want: []Advisory{
-				{
-					VulnerabilityID:    "GHSA-5hg3-6c2f-f3wr",
-					VulnerableVersions: []string{"2.0.8", "1.11.15"},
-					PatchedVersions:    []string{"\u003e= 2.0, \u003c 2.0.8", "\u003e= 1.11.0, \u003c 1.11.15"},
-				},
-			},
-		},
-		{
-			name:      "happy path pip uppercase",
-			ecosystem: Pip,
-			args: args{
-				release: "GitHub Security Advisory Pip",
-				pkgName: "Django",
-			},
-			forEachAdvisoryExpectation: db.OperationForEachAdvisoryExpectation{
-				Args: db.OperationForEachAdvisoryArgs{
-					Source:  "GitHub Security Advisory Pip",
-					PkgName: "django",
-				},
-				Returns: db.OperationForEachAdvisoryReturns{
-					Value: map[string][]byte{
-						"GHSA-5hg3-6c2f-f3wr": []byte(`{"VulnerableVersions": ["2.0.8", "1.11.15"], "PatchedVersions": ["\u003e= 2.0, \u003c 2.0.8", "\u003e= 1.11.0, \u003c 1.11.15"]}`),
-					},
-				},
-			},
-			want: []Advisory{
-				{
-					VulnerabilityID:    "GHSA-5hg3-6c2f-f3wr",
-					VulnerableVersions: []string{"2.0.8", "1.11.15"},
-					PatchedVersions:    []string{"\u003e= 2.0, \u003c 2.0.8", "\u003e= 1.11.0, \u003c 1.11.15"},
-				},
-			},
-		},
-		{
-			name:      "happy path pip hyphen",
-			ecosystem: Pip,
-			args: args{
-				release: "GitHub Security Advisory Pip",
-				pkgName: "py_gfm",
-			},
-			forEachAdvisoryExpectation: db.OperationForEachAdvisoryExpectation{
-				Args: db.OperationForEachAdvisoryArgs{
-					Source:  "GitHub Security Advisory Pip",
-					PkgName: "py-gfm",
-				},
-				Returns: db.OperationForEachAdvisoryReturns{
+				Returns: db.ForEachAdvisoryReturns{
 					Value: map[string][]byte{
 						"GHSA-5hg3-6c2f-f3wr": []byte(`{"VulnerableVersions": ["2.0.8", "1.11.15"], "PatchedVersions": ["\u003e= 2.0, \u003c 2.0.8", "\u003e= 1.11.0, \u003c 1.11.15"]}`),
 					},
@@ -1623,12 +1098,12 @@ func TestVulnSrc_Get(t *testing.T) {
 				release: "GitHub Security Advisory Rubygems",
 				pkgName: "activestorage",
 			},
-			forEachAdvisoryExpectation: db.OperationForEachAdvisoryExpectation{
-				Args: db.OperationForEachAdvisoryArgs{
+			forEachAdvisoryExpectation: db.ForEachAdvisoryExpectation{
+				Args: db.ForEachAdvisoryArgs{
 					Source:  "GitHub Security Advisory Rubygems",
 					PkgName: "activestorage",
 				},
-				Returns: db.OperationForEachAdvisoryReturns{
+				Returns: db.ForEachAdvisoryReturns{
 					Value: map[string][]byte{
 						"GHSA-7rr7-rcjw-56vj": []byte(`{"VulnerableVersions": ["5.2.1.1"], "PatchedVersions": ["\u003e= 5.2.0, \u003c 5.2.1.1"]}`),
 					},
@@ -1649,12 +1124,12 @@ func TestVulnSrc_Get(t *testing.T) {
 				release: "contao/core-bundle",
 				pkgName: "4.8.6",
 			},
-			forEachAdvisoryExpectation: db.OperationForEachAdvisoryExpectation{
-				Args: db.OperationForEachAdvisoryArgs{
+			forEachAdvisoryExpectation: db.ForEachAdvisoryExpectation{
+				Args: db.ForEachAdvisoryArgs{
 					Source:  "GitHub Security Advisory Composer",
 					PkgName: "4.8.6",
 				},
-				Returns: db.OperationForEachAdvisoryReturns{
+				Returns: db.ForEachAdvisoryReturns{
 					Err: errors.New("error"),
 				},
 			},

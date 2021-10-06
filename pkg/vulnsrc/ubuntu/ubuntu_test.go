@@ -1,105 +1,97 @@
-package ubuntu_test
+package ubuntu
 
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/aquasecurity/trivy-db/pkg/db"
-	"github.com/aquasecurity/trivy-db/pkg/dbtest"
 	"github.com/aquasecurity/trivy-db/pkg/types"
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/ubuntu"
+	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/vulnerability"
+	"github.com/stretchr/testify/assert"
+	bolt "go.etcd.io/bbolt"
 )
 
-func TestVulnSrc_Update(t *testing.T) {
-	type wantKV struct {
-		key   []string
-		value interface{}
-	}
+func TestVulnSrc_commit(t *testing.T) {
 	tests := []struct {
-		name       string
-		statuses   []string
-		wantValues []wantKV
-		noBuckets  [][]string
-		wantErr    string
+		name                   string
+		expectedErrorMsg       string
+		cves                   []UbuntuCVE
+		putAdvisory            []db.PutAdvisoryExpectation
+		putVulnerabilityDetail []db.PutVulnerabilityDetailExpectation
+		putSeverity            []db.PutSeverityExpectation
 	}{
 		{
 			name: "happy path",
-			wantValues: []wantKV{
+			cves: []UbuntuCVE{
 				{
-					key: []string{"advisory-detail", "CVE-2020-1234", "ubuntu 18.04", "xen"},
-					value: types.Advisory{
-						FixedVersion: "1.2.3",
+					Description: "test description",
+					Candidate:   "CVE-2020-123",
+					Priority:    "critical",
+					Patches: map[PackageName]Patch{
+						"test package": {
+							"disco": Status{
+								Status: "released",
+								Note:   "v1.2.3",
+							},
+						},
 					},
+					References: []string{"test reference 123"},
 				},
+			},
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					key: []string{"vulnerability-detail", "CVE-2020-1234", "ubuntu"},
-					value: types.VulnerabilityDetail{
-						Description: "Observable response discrepancy in some Intel(R) Processors may allow an authorized user to potentially enable information disclosure via local access.",
-						Severity:    2,
-						References:  []string{"https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-0089"},
+					Args: db.PutAdvisoryArgs{
+						TxAnything:      true,
+						Source:          "ubuntu 19.04",
+						PkgName:         "test package",
+						VulnerabilityID: "CVE-2020-123",
+						Advisory:        types.Advisory{VulnerabilityID: "", FixedVersion: "v1.2.3"},
 					},
 				},
 			},
-			noBuckets: [][]string{
-				{"advisory-detail", "CVE-2020-1234", "ubuntu 20.04"},
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
+				{
+					Args: db.PutVulnerabilityDetailArgs{
+						TxAnything:      true,
+						VulnerabilityID: "CVE-2020-123",
+						Source:          vulnerability.Ubuntu,
+						Vulnerability: types.VulnerabilityDetail{
+							Severity:    types.SeverityCritical,
+							Description: "test description",
+							References:  []string{"test reference 123"},
+						},
+					},
+				},
+			},
+			putSeverity: []db.PutSeverityExpectation{
+				{
+					Args: db.PutSeverityArgs{
+						TxAnything:      true,
+						VulnerabilityID: "CVE-2020-123",
+						Severity:        types.SeverityUnknown,
+					},
+				},
 			},
 		},
-		{
-			name:     "custom statuses",
-			statuses: []string{"released", "needs-triage"},
-			wantValues: []wantKV{
-				{
-					key: []string{"advisory-detail", "CVE-2020-1234", "ubuntu 18.04", "xen"},
-					value: types.Advisory{
-						FixedVersion: "1.2.3",
-					},
-				},
-				{
-					key:   []string{"advisory-detail", "CVE-2020-1234", "ubuntu 20.04", "xen"},
-					value: types.Advisory{},
-				},
-				{
-					key: []string{"vulnerability-detail", "CVE-2020-1234", "ubuntu"},
-					value: types.VulnerabilityDetail{
-						Description: "Observable response discrepancy in some Intel(R) Processors may allow an authorized user to potentially enable information disclosure via local access.",
-						Severity:    2,
-						References:  []string{"https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-0089"},
-					},
-				},
-			},
-		},
+
+		// TODO: Add other test cases for failing paths
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cacheDir := dbtest.InitTestDB(t, nil)
+			tx := &bolt.Tx{}
+			mockDBConfig := new(db.MockOperation)
+			mockDBConfig.ApplyPutAdvisoryExpectations(tt.putAdvisory)
+			mockDBConfig.ApplyPutVulnerabilityDetailExpectations(tt.putVulnerabilityDetail)
+			mockDBConfig.ApplyPutSeverityExpectations(tt.putSeverity)
 
-			var options []ubuntu.Option
-			if len(tt.statuses) != 0 {
-				options = append(options, ubuntu.WithStatuses(tt.statuses))
+			ac := VulnSrc{dbc: mockDBConfig}
+			err := ac.commit(tx, tt.cves)
+			switch {
+			case tt.expectedErrorMsg != "":
+				assert.Contains(t, err.Error(), tt.expectedErrorMsg, tt.name)
+			default:
+				assert.NoError(t, err, tt.name)
 			}
-			src := ubuntu.NewVulnSrc(options...)
-			err := src.Update("testdata")
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantErr, tt.name)
-				return
-			}
-
-			require.NoError(t, err, tt.name)
-
-			// Compare DB entries
-			require.NoError(t, err, db.Close())
-			dbPath := db.Path(cacheDir)
-			for _, want := range tt.wantValues {
-				dbtest.JSONEq(t, dbPath, want.key, want.value)
-			}
-
-			// Verify these buckets don't exist
-			for _, noBuckets := range tt.noBuckets {
-				dbtest.NoBucket(t, dbPath, noBuckets, "the bucket exists")
-			}
+			mockDBConfig.AssertExpectations(t)
 		})
 	}
 }

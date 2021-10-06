@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/xerrors"
@@ -59,10 +58,6 @@ func NewVulnSrc() VulnSrc {
 	}
 }
 
-func (vs VulnSrc) Name() string {
-	return vulnerability.RubySec
-}
-
 func (vs VulnSrc) Update(dir string) error {
 	repoPath := filepath.Join(dir, bundlerDir)
 	if err := vs.update(repoPath); err != nil {
@@ -99,10 +94,6 @@ func (vs VulnSrc) walkFunc(err error, info os.FileInfo, path string, tx *bolt.Tx
 	if info.IsDir() {
 		return nil
 	}
-	if strings.HasPrefix(strings.ToUpper(info.Name()), "OSVDB") {
-		return nil
-	}
-
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		return xerrors.Errorf("failed to read a file: %w", err)
@@ -113,13 +104,12 @@ func (vs VulnSrc) walkFunc(err error, info os.FileInfo, path string, tx *bolt.Tx
 	if err != nil {
 		return xerrors.Errorf("failed to unmarshal YAML: %w", err)
 	}
-	if strings.Contains(strings.ToLower(advisory.Url), "osvdb.org") {
-		advisory.Url = ""
-	}
 
 	var vulnerabilityID string
 	if advisory.Cve != "" {
 		vulnerabilityID = fmt.Sprintf("CVE-%s", advisory.Cve)
+	} else if advisory.Osvdb != "" {
+		vulnerabilityID = fmt.Sprintf("OSVDB-%s", advisory.Osvdb)
 	} else if advisory.Ghsa != "" {
 		vulnerabilityID = fmt.Sprintf("GHSA-%s", advisory.Ghsa)
 	} else {
@@ -131,7 +121,7 @@ func (vs VulnSrc) walkFunc(err error, info os.FileInfo, path string, tx *bolt.Tx
 		PatchedVersions:    advisory.PatchedVersions,
 		UnaffectedVersions: advisory.UnaffectedVersions,
 	}
-	err = vs.dbc.PutAdvisoryDetail(tx, vulnerabilityID, vulnerability.RubySec, advisory.Gem, a)
+	err = vs.dbc.PutAdvisory(tx, vulnerability.RubySec, advisory.Gem, vulnerabilityID, a)
 	if err != nil {
 		return xerrors.Errorf("failed to save ruby advisory: %w", err)
 	}

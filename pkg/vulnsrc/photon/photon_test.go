@@ -22,7 +22,7 @@ func TestVulnSrc_Update(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        args
-		batchUpdate []db.OperationBatchUpdateExpectation
+		batchUpdate []db.BatchUpdateExpectation
 		wantErr     string
 	}{
 		{
@@ -30,9 +30,9 @@ func TestVulnSrc_Update(t *testing.T) {
 			args: args{
 				dir: "testdata",
 			},
-			batchUpdate: []db.OperationBatchUpdateExpectation{
+			batchUpdate: []db.BatchUpdateExpectation{
 				{
-					Args: db.OperationBatchUpdateArgs{
+					Args: db.BatchUpdateArgs{
 						FnAnything: true,
 					},
 				},
@@ -50,12 +50,12 @@ func TestVulnSrc_Update(t *testing.T) {
 			args: args{
 				dir: "testdata",
 			},
-			batchUpdate: []db.OperationBatchUpdateExpectation{
+			batchUpdate: []db.BatchUpdateExpectation{
 				{
-					Args: db.OperationBatchUpdateArgs{
+					Args: db.BatchUpdateArgs{
 						FnAnything: true,
 					},
-					Returns: db.OperationBatchUpdateReturns{
+					Returns: db.BatchUpdateReturns{
 						Err: errors.New("error"),
 					},
 				},
@@ -90,9 +90,9 @@ func TestVulnSrc_commit(t *testing.T) {
 	tests := []struct {
 		name                   string
 		args                   args
-		putAdvisoryDetail      []db.OperationPutAdvisoryDetailExpectation
-		putVulnerabilityDetail []db.OperationPutVulnerabilityDetailExpectation
-		putSeverity            []db.OperationPutSeverityExpectation
+		putAdvisory            []db.PutAdvisoryExpectation
+		putVulnerabilityDetail []db.PutVulnerabilityDetailExpectation
+		putSeverity            []db.PutSeverityExpectation
 		wantErr                string
 	}{
 		{
@@ -109,9 +109,9 @@ func TestVulnSrc_commit(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "Photon OS 1.0",
 						PkgName:         "ansible",
@@ -122,9 +122,9 @@ func TestVulnSrc_commit(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						Source:          vulnerability.Photon,
 						VulnerabilityID: "CVE-2019-10156",
@@ -134,9 +134,9 @@ func TestVulnSrc_commit(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2019-10156",
 						Severity:        types.SeverityUnknown,
@@ -145,7 +145,7 @@ func TestVulnSrc_commit(t *testing.T) {
 			},
 		},
 		{
-			name: "putAdvisoryDetail returns an error",
+			name: "putAdvisory returns an error",
 			args: args{
 				cves: []PhotonCVE{
 					{
@@ -158,9 +158,9 @@ func TestVulnSrc_commit(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "Photon OS 1.0",
 						PkgName:         "ansible",
@@ -169,7 +169,7 @@ func TestVulnSrc_commit(t *testing.T) {
 							FixedVersion: "2.8.3-1.ph3",
 						},
 					},
-					Returns: db.OperationPutAdvisoryDetailReturns{
+					Returns: db.PutAdvisoryReturns{
 						Err: errors.New("error"),
 					},
 				},
@@ -190,9 +190,9 @@ func TestVulnSrc_commit(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "Photon OS 1.0",
 						PkgName:         "ansible",
@@ -203,9 +203,9 @@ func TestVulnSrc_commit(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						Source:          vulnerability.Photon,
 						VulnerabilityID: "CVE-2019-10156",
@@ -213,7 +213,7 @@ func TestVulnSrc_commit(t *testing.T) {
 							CvssScoreV3: 5.4,
 						},
 					},
-					Returns: db.OperationPutVulnerabilityDetailReturns{
+					Returns: db.PutVulnerabilityDetailReturns{
 						Err: errors.New("error"),
 					},
 				},
@@ -234,9 +234,9 @@ func TestVulnSrc_commit(t *testing.T) {
 					},
 				},
 			},
-			putAdvisoryDetail: []db.OperationPutAdvisoryDetailExpectation{
+			putAdvisory: []db.PutAdvisoryExpectation{
 				{
-					Args: db.OperationPutAdvisoryDetailArgs{
+					Args: db.PutAdvisoryArgs{
 						TxAnything:      true,
 						Source:          "Photon OS 1.0",
 						PkgName:         "ansible",
@@ -247,9 +247,9 @@ func TestVulnSrc_commit(t *testing.T) {
 					},
 				},
 			},
-			putVulnerabilityDetail: []db.OperationPutVulnerabilityDetailExpectation{
+			putVulnerabilityDetail: []db.PutVulnerabilityDetailExpectation{
 				{
-					Args: db.OperationPutVulnerabilityDetailArgs{
+					Args: db.PutVulnerabilityDetailArgs{
 						TxAnything:      true,
 						Source:          vulnerability.Photon,
 						VulnerabilityID: "CVE-2019-10156",
@@ -259,14 +259,14 @@ func TestVulnSrc_commit(t *testing.T) {
 					},
 				},
 			},
-			putSeverity: []db.OperationPutSeverityExpectation{
+			putSeverity: []db.PutSeverityExpectation{
 				{
-					Args: db.OperationPutSeverityArgs{
+					Args: db.PutSeverityArgs{
 						TxAnything:      true,
 						VulnerabilityID: "CVE-2019-10156",
 						Severity:        types.SeverityUnknown,
 					},
-					Returns: db.OperationPutSeverityReturns{
+					Returns: db.PutSeverityReturns{
 						Err: errors.New("error"),
 					},
 				},
@@ -277,7 +277,7 @@ func TestVulnSrc_commit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDBConfig := new(db.MockOperation)
-			mockDBConfig.ApplyPutAdvisoryDetailExpectations(tt.putAdvisoryDetail)
+			mockDBConfig.ApplyPutAdvisoryExpectations(tt.putAdvisory)
 			mockDBConfig.ApplyPutVulnerabilityDetailExpectations(tt.putVulnerabilityDetail)
 			mockDBConfig.ApplyPutSeverityExpectations(tt.putSeverity)
 
@@ -305,7 +305,7 @@ func TestVulnSrc_Get(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          args
-		getAdvisories db.OperationGetAdvisoriesExpectation
+		getAdvisories db.GetAdvisoriesExpectation
 		want          []types.Advisory
 		wantErr       string
 	}{
@@ -315,12 +315,12 @@ func TestVulnSrc_Get(t *testing.T) {
 				release: "1.0",
 				pkgName: "ansible",
 			},
-			getAdvisories: db.OperationGetAdvisoriesExpectation{
-				Args: db.OperationGetAdvisoriesArgs{
+			getAdvisories: db.GetAdvisoriesExpectation{
+				Args: db.GetAdvisoriesArgs{
 					Source:  "Photon OS 1.0",
 					PkgName: "ansible",
 				},
-				Returns: db.OperationGetAdvisoriesReturns{
+				Returns: db.GetAdvisoriesReturns{
 					Advisories: []types.Advisory{
 						{
 							VulnerabilityID: "CVE-2019-3828",
@@ -342,12 +342,12 @@ func TestVulnSrc_Get(t *testing.T) {
 				release: "2.0",
 				pkgName: "bash",
 			},
-			getAdvisories: db.OperationGetAdvisoriesExpectation{
-				Args: db.OperationGetAdvisoriesArgs{
+			getAdvisories: db.GetAdvisoriesExpectation{
+				Args: db.GetAdvisoriesArgs{
 					Source:  "Photon OS 2.0",
 					PkgName: "bash",
 				},
-				Returns: db.OperationGetAdvisoriesReturns{
+				Returns: db.GetAdvisoriesReturns{
 					Advisories: nil,
 					Err:        errors.New("error"),
 				},

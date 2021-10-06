@@ -14,8 +14,6 @@ import (
 	"github.com/aquasecurity/trivy-db/pkg/db"
 	"github.com/aquasecurity/trivy-db/pkg/types"
 	"github.com/aquasecurity/trivy-db/pkg/utils"
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/python"
-	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/vulnerability"
 )
 
 const (
@@ -66,24 +64,6 @@ func NewVulnSrc(ecosystem Ecosystem) VulnSrc {
 	}
 }
 
-func (vs VulnSrc) Name() string {
-	switch vs.ecosystem {
-	case Composer:
-		return vulnerability.GHSAComposer
-	case Maven:
-		return vulnerability.GHSAMaven
-	case Npm:
-		return vulnerability.GHSANpm
-	case Nuget:
-		return vulnerability.GHSANuget
-	case Pip:
-		return vulnerability.GHSAPip
-	case Rubygems:
-		return vulnerability.GHSARubygems
-	}
-	return ""
-}
-
 func (vs VulnSrc) Update(dir string) error {
 	var ghsas []GithubSecurityAdvisory
 
@@ -121,9 +101,6 @@ func (vs VulnSrc) save(ghsas []GithubSecurityAdvisory) error {
 
 func (vs VulnSrc) commit(tx *bolt.Tx, ghsas []GithubSecurityAdvisory) error {
 	for _, ghsa := range ghsas {
-		if ghsa.Advisory.WithdrawnAt != "" {
-			continue
-		}
 		platformName := fmt.Sprintf(platformFormat, vs.ecosystem)
 		var pvs, avs []string
 		for _, va := range ghsa.Versions {
@@ -137,15 +114,13 @@ func (vs VulnSrc) commit(tx *bolt.Tx, ghsas []GithubSecurityAdvisory) error {
 				va.FirstPatchedVersion.Identifier = strings.TrimPrefix(va.FirstPatchedVersion.Identifier, "< ")
 			}
 
-			if va.FirstPatchedVersion.Identifier != "" {
-				pvs = append(pvs, va.FirstPatchedVersion.Identifier)
-			}
+			pvs = append(pvs, va.FirstPatchedVersion.Identifier)
 			avs = append(avs, va.VulnerableVersionRange)
 		}
 
 		vulnID := ghsa.Advisory.GhsaId
 		for _, identifier := range ghsa.Advisory.Identifiers {
-			if identifier.Type == "CVE" && identifier.Value != "" {
+			if identifier.Type == "CVE" {
 				vulnID = identifier.Value
 			}
 		}
@@ -156,9 +131,13 @@ func (vs VulnSrc) commit(tx *bolt.Tx, ghsas []GithubSecurityAdvisory) error {
 			VulnerableVersions: avs,
 		}
 
-		pkgName := vs.ToLowerCasePackage(ghsa.Package.Name)
+		// Nuget is case-sensitive
+		pkgName := ghsa.Package.Name
+		if vs.ecosystem != Nuget {
+			pkgName = strings.ToLower(ghsa.Package.Name)
+		}
 
-		err := vs.dbc.PutAdvisoryDetail(tx, vulnID, platformName, pkgName, a)
+		err := vs.dbc.PutAdvisory(tx, platformName, pkgName, vulnID, a)
 		if err != nil {
 			return xerrors.Errorf("failed to save GHSA: %w", err)
 		}
@@ -189,8 +168,6 @@ func (vs VulnSrc) commit(tx *bolt.Tx, ghsas []GithubSecurityAdvisory) error {
 }
 
 func (vs VulnSrc) Get(pkgName string) ([]Advisory, error) {
-	pkgName = vs.ToLowerCasePackage(pkgName)
-
 	bucket := fmt.Sprintf(platformFormat, vs.ecosystem.String())
 	advisories, err := vs.dbc.ForEachAdvisory(bucket, pkgName)
 	if err != nil {
@@ -207,18 +184,6 @@ func (vs VulnSrc) Get(pkgName string) ([]Advisory, error) {
 		results = append(results, advisory)
 	}
 	return results, nil
-}
-func (vs VulnSrc) ToLowerCasePackage(pkgName string) string {
-	if vs.ecosystem == Pip {
-		/*
-			  from https://www.python.org/dev/peps/pep-0426/#name
-				All comparisons of distribution names MUST be case insensitive, and MUST consider hyphens and underscores to be equivalent.
-		*/
-		pkgName = python.ToLowerCasePythonPackage(pkgName)
-	} else if vs.ecosystem != Nuget { // Nuget is case-sensitive
-		pkgName = strings.ToLower(pkgName)
-	}
-	return pkgName
 }
 
 func severityFromThreat(urgency string) types.Severity {
