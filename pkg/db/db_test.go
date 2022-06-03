@@ -38,7 +38,7 @@ func TestInit(t *testing.T) {
 			if tt.dbPath != "" {
 				dbPath := db.Path(tmpDir)
 				dbDir := filepath.Dir(dbPath)
-				err = os.MkdirAll(dbDir, 0700)
+				err = os.MkdirAll(dbDir, 0o700)
 				require.NoError(t, err)
 
 				err = copy(dbPath, tt.dbPath)

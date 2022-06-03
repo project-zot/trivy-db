@@ -55,13 +55,12 @@ type Operation interface {
 	RedHatNVRToCPEs(nvr string) (cpeIndices []int, err error)
 }
 
-type Config struct {
-}
+type Config struct{}
 
 func Init(cacheDir string) (err error) {
 	dbPath := Path(cacheDir)
 	dbDir = filepath.Dir(dbPath)
-	if err = os.MkdirAll(dbDir, 0700); err != nil {
+	if err = os.MkdirAll(dbDir, 0o700); err != nil {
 		return xerrors.Errorf("failed to mkdir: %w", err)
 	}
 
@@ -73,12 +72,12 @@ func Init(cacheDir string) (err error) {
 			if err = os.Remove(dbPath); err != nil {
 				return
 			}
-			db, err = bolt.Open(dbPath, 0600, nil)
+			db, err = bolt.Open(dbPath, 0o600, nil)
 		}
 		debug.SetPanicOnFault(false)
 	}()
 
-	db, err = bolt.Open(dbPath, 0600, nil)
+	db, err = bolt.Open(dbPath, 0o600, nil)
 	if err != nil {
 		return xerrors.Errorf("failed to open db: %w", err)
 	}
@@ -86,7 +85,7 @@ func Init(cacheDir string) (err error) {
 }
 
 func Dir(cacheDir string) string {
-	return filepath.Join(cacheDir, "db")
+	return cacheDir
 }
 
 func Path(cacheDir string) string {
